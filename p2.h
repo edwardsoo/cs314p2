@@ -1,5 +1,5 @@
-#define MIN_MOTHER_EYE_Z -100.0f
-#define EYE_MOVE_UNIT 1.0f
+#define MIN_MOTHER_EYE_Z -500.0f
+#define EYE_MOVE_UNIT 10.0f
 
 #define SPHERE_SLICES 16
 #define SPHERE_STACKS 16
@@ -13,12 +13,23 @@
 #define BLUE GREEN+1
 #define COLOR_BASES BLUE+1
 
+// Ships properties
+#define SCOUT_BODY_SIZE 1.0
+#define SCOUT_CABIN_LENGTH 1.5
+#define SCOUT_CABIN_WDITH 0.6
+#define SCOUT_WING_LENGTH 0.5
+#define SCOUT_WING_WIDTH 0.3
+#define SCOUT_PANEL_WIDTH 0.1
+#define SCOUT_PANEL_LENDTH 2.0
+#define SCOUT_PANEL_HEIGHT 1.0
+
 
 // Sun and planet properties
 #define ORBIT_WEIGHT 0.2
 
 #define ORBIT_ALPHA 0.3
 #define WHITE 1.0,1.0,1.0
+#define GREY 0.5,0.5,0.5
 #define BROWN 0.8,0.7,0.6
 #define SUN_COLOR {1.0,0.5,0.1}
 #define MERCURY_COLOR {0.5,0.5,0.7}
@@ -35,7 +46,7 @@
 #define SUN_RADIUS EARTH_RADIUS*5.0
 #define MERCURY_RADIUS EARTH_RADIUS/2.0
 #define VENUS_RADIUS EARTH_RADIUS
-#define EARTH_RADIUS 1.0
+#define EARTH_RADIUS 5.0
 #define MOON_RADIUS EARTH_RADIUS/2.0
 #define MARS_RADIUS EARTH_RADIUS/1.5
 #define JUPITER_RADIUS EARTH_RADIUS*4.0

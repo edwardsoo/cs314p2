@@ -53,6 +53,10 @@ float mother_up_z = 0;
 
 bool paused = 0;
 
+// mouse
+bool left_pressed = 0;
+int prev_x, prev_y;
+
 // Solar system
 float obj_spin_rots[NUM_SPHERE] = {0};
 float obj_orbit_rots[NUM_SPHERE] = {0};
@@ -141,26 +145,32 @@ void mouse_callback(int button, int state, int x, int y) {
 	printf("button:%d, state:%d\n", button, state);
 	switch (button)
 	{
-	case GLUT_MIDDLE_BUTTON:
-		if (state == GLUT_UP ) {
-			mother_eye_z -= 1.0f;
-			if (mother_eye_z < MIN_MOTHER_EYE_Z) {
-				mother_eye_z = MIN_MOTHER_EYE_Z;
-			}
-		} else {
-			mother_eye_z += 1.0f;
+	case GLUT_LEFT_BUTTON:
+		if (state == GLUT_DOWN ) { 
+			left_pressed = true;
+			prev_x = x;
+			prev_y = y;
 		}
+		else 
+			left_pressed = false;
 		break;
 	default:
 		break;
 	}
-
 }
 
 // motion callback
 void motion_callback(int x, int y) {
+	int x_move, y_move;
+	if (left_pressed) {
+		x_move = x - prev_x;
+		y_move = y -prev_y;
+		prev_x = x;
+		prev_y = y;
+	}
+	mother_eye_x += x_move;
+	mother_eye_y += y_move;
 
-	
 
 }
 
@@ -215,6 +225,54 @@ void update_soloar_system() {
 
 }
 
+void draw_box(float x, float y, float z) {	
+	glPushMatrix();
+	glScalef(x,y,z);
+	glutSolidCube(1);
+	glPopMatrix();
+}
+
+void draw_scoutship_wing() {
+	// wing
+	glPushMatrix();
+	glTranslatef(SCOUT_BODY_SIZE/2+SCOUT_WING_LENGTH/2,0,0);
+	draw_box(SCOUT_WING_LENGTH,SCOUT_WING_WIDTH,SCOUT_WING_WIDTH);
+	glPushMatrix();
+	// wing center panel
+	glTranslatef(SCOUT_WING_LENGTH/2+SCOUT_PANEL_WIDTH/2,0,0);
+	glRotatef(90,0,1,0);
+	draw_box(SCOUT_PANEL_LENDTH,SCOUT_PANEL_HEIGHT,SCOUT_PANEL_WIDTH);
+	glPushMatrix();
+	// wing bottom panel
+	glTranslatef(0,-SCOUT_PANEL_HEIGHT/2,0);
+	glRotatef(30,1,0,0);
+	glTranslatef(0,-SCOUT_PANEL_HEIGHT/2,0);
+	draw_box(SCOUT_PANEL_LENDTH,SCOUT_PANEL_HEIGHT,SCOUT_PANEL_WIDTH);
+	glPopMatrix();
+	// wing top panel
+	glTranslatef(0,SCOUT_PANEL_HEIGHT/2,0);
+	glRotatef(-30,1,0,0);
+	glTranslatef(0,SCOUT_PANEL_HEIGHT/2,0);
+	draw_box(SCOUT_PANEL_LENDTH,SCOUT_PANEL_HEIGHT,SCOUT_PANEL_WIDTH);
+	glPopMatrix();
+	glPopMatrix();
+}
+
+void draw_scoutship() {
+	// main body
+	glPushMatrix();
+	glColor3f(GREY);
+	draw_box(SCOUT_CABIN_WDITH,SCOUT_CABIN_WDITH,SCOUT_CABIN_LENGTH);
+	glColor3f(WHITE);
+	draw_box(SCOUT_BODY_SIZE,SCOUT_BODY_SIZE,SCOUT_BODY_SIZE);
+	// right wing
+	draw_scoutship_wing();
+	// left wing
+	glRotatef(180,0,1,0);
+	draw_scoutship_wing();
+	glPopMatrix();
+}
+
 void draw_solar_system() {
 
 	for (int i=0;i<NUM_SPHERE;i++) {
@@ -239,6 +297,7 @@ void draw_solar_system() {
 			glTranslatef(OBJ_ORBIT_RADIUS[MOON], 0, 0);
 			glColor3f(OBJ_COLORS[i][RED],OBJ_COLORS[i][GREEN],OBJ_COLORS[i][BLUE]);
 			gluSphere(spheres[i], OBJ_RADIUS[i], SPHERE_SLICES, SPHERE_STACKS); 
+
 			break;
 		default:
 			glColor4f(WHITE,ORBIT_ALPHA);
@@ -253,14 +312,13 @@ void draw_solar_system() {
 				glRotatef(SATURN_RING_ANGLE, 0,0,1.0);
 				glColor4f(BROWN,ORBIT_ALPHA);
 				gluDisk(disks[SATURN_RING],SATURN_RING_INNER_RAD,
-				SATURN_RING_OUTER_RAD,DISK_SLICES,DISK_LOOPS);
+					SATURN_RING_OUTER_RAD,DISK_SLICES,DISK_LOOPS);
 			}
 			break;
 		}
 		glPopMatrix();
 	}
 
-	glLoadIdentity();
 }
 
 // display callback
@@ -287,23 +345,24 @@ void display_callback( void ){
 	gluLookAt(mother_eye_x, mother_eye_y, mother_eye_z, mother_lookat_x, mother_lookat_y, mother_lookat_z,
 		mother_up_x, mother_up_y, mother_up_z);
 
-
-	glBegin(GL_LINES);
-	glColor3f( 1.0f, 0.0f, 0.0f );
-	glVertex3f( 1.0f, 0.0f, 0.0f );
-	glVertex3f( 0.0f, 0.0f, 0.0f );
-	glColor3f( 0.0f, 1.0f, 0.0f );
-	glVertex3f( 0.0f, 1.0f, 0.0f );
-	glVertex3f( 0.0f, 0.0f, 0.0f );
-	glColor3f( 0.0f, 0.0f, 1.0f );
-	glVertex3f( 0.0f, 0.0f, 1.0f );
-	glVertex3f( 0.0f, 0.0f, 0.0f );
-	glEnd();
+	GLdouble params[16] = {0};
+	glGetDoublev(GL_MODELVIEW_MATRIX,params);
+	for (int i =0;i<16;i++) {
+		if (i % 4 == 0)
+			printf("\n");
+		printf("%f ", params[i]);
+	}
+			printf("\n");
 
 	if (!paused) {
 		update_soloar_system();
 	}
 	draw_solar_system();
+
+	glPushMatrix();
+	glTranslatef(0,0,MIN_MOTHER_EYE_Z+5);
+	draw_scoutship();
+	glPopMatrix();
 
 	// swap the front and back buffers to display the scene
 	glutSetWindow( current_window );
@@ -368,6 +427,7 @@ int main( int argc, char **argv ){
 	glutDisplayFunc( display_callback );
 	glutReshapeFunc( resize_callback );
 	glutMouseFunc( mouse_callback );
+	glutMotionFunc ( motion_callback );
 
 	// initialize the scout ship window
 	glutInitWindowSize( disp_width, disp_height );
