@@ -65,6 +65,7 @@ float scout_up_y = 1;
 float scout_up_z = 0;
 
 bool paused = 0;
+bool scout = false;
 
 // mouse
 bool left_pressed = 0;
@@ -239,22 +240,49 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		paused = !paused;
 		break;
 	case 'z':
-		mother_z += EYE_MOVE_UNIT;
+		printf("%d\n",scout);
+		if (scout)
+			scout_z += EYE_MOVE_UNIT;
+		else
+			mother_z += EYE_MOVE_UNIT;
 		break;
 	case 'Z':
-		mother_z -= EYE_MOVE_UNIT;
+		if (scout)
+			scout_z -= EYE_MOVE_UNIT;
+		else
+			mother_z -= EYE_MOVE_UNIT;
 		break;
 	case 'y':
-		mother_y += EYE_MOVE_UNIT;
+		if (scout)
+			scout_y += EYE_MOVE_UNIT;
+		else
+			mother_y += EYE_MOVE_UNIT;
 		break;
 	case 'Y':
-		mother_y -= EYE_MOVE_UNIT;
+		if (scout)
+			scout_y -= EYE_MOVE_UNIT;
+		else
+			mother_y -= EYE_MOVE_UNIT;
 		break;
 	case 'x':
-		mother_x += EYE_MOVE_UNIT;
+		if (scout)
+			scout_x += EYE_MOVE_UNIT;
+		else
+			mother_x += EYE_MOVE_UNIT;
 		break;
 	case 'X':
-		mother_x -= EYE_MOVE_UNIT;
+		if (scout)
+			scout_x -= EYE_MOVE_UNIT;
+		else
+			mother_x -= EYE_MOVE_UNIT;
+		break;
+	case 62:
+		scout = false;
+		printf("%d\n",scout);
+		break;
+	case 60:
+		scout = true;
+		printf("%d\n",scout);
 		break;
 	default:
 		break;
@@ -357,7 +385,7 @@ void draw_mothership() {
 
 void draw_orbit_and_planet(int i) {
 	glPushMatrix();
-	glRotatef(90,1.0,0,0);
+	glRotatef(-90,1.0,0,0);
 	gluDisk(disks[i],OBJ_ORBIT_RADIUS[i]-ORBIT_WEIGHT/2,
 		OBJ_ORBIT_RADIUS[i]+ORBIT_WEIGHT/2,DISK_SLICES,DISK_LOOPS);
 	glRotatef(obj_orbit_rots[i], 0, 0, 1.0);
@@ -434,6 +462,9 @@ void display_callback( void ){
 			scout_up_x, scout_up_y, scout_up_z);	
 
 		glPushMatrix();
+
+		float del_x = mother_x-mother_lookat_x;
+		float del_y = mother_y-mother_lookat_y;
 		glTranslatef(mother_x,mother_y,mother_z);
 		draw_mothership();
 		glPopMatrix();

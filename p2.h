@@ -1,4 +1,4 @@
-#define EYE_MOVE_UNIT 1.0f
+#define EYE_MOVE_UNIT 10.0f
 
 #define SPHERE_SLICES 16
 #define SPHERE_STACKS 16
