@@ -43,6 +43,7 @@ int mother_window, scout_window;
 int disp_width=512, disp_height=512;
 
 // cameras
+GLdouble *mother_trackball;;
 float mother_eye_x = 0;
 float mother_eye_y = 0;
 float mother_eye_z = MIN_MOTHER_EYE_Z;
@@ -123,6 +124,19 @@ void init(){
 		obj_orbit_rots[i] = rand() % 360;
 	}
 
+	
+	// set trackball matrix to identity
+	glPushMatrix();
+	glLoadIdentity();
+	mother_trackball = new GLdouble[16]();
+	glGetDoublev(GL_MODELVIEW, mother_trackball);
+	for (int i =0;i<16;i++) {
+		if (i % 4 == 0)
+			printf("\n");
+		printf("%f ", mother_trackball[i]);
+	}
+	printf("\n");
+	glPopMatrix();
 }
 
 // free any allocated objects and return
@@ -163,15 +177,35 @@ void mouse_callback(int button, int state, int x, int y) {
 
 // motion callback
 void motion_callback(int x, int y) {
+	int current_window;
 	int x_move, y_move;
+	float gaze_x, gaze_y, gaze_z;
+
+	// retrieve the currently active window
+	current_window = glutGetWindow();
+
 	if (left_pressed) {
 		x_move = x - prev_x;
 		y_move = y -prev_y;
 		prev_x = x;
 		prev_y = y;
 	}
-	mother_eye_x += x_move;
-	mother_eye_y += y_move;
+
+	glPushMatrix();
+
+	if (current_window == mother_window) {
+		gaze_x = mother_eye_x - mother_lookat_x;
+		gaze_y = mother_eye_y - mother_lookat_y;
+		gaze_z = mother_eye_z - mother_lookat_z;
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glTranslatef(gaze_x,gaze_y,gaze_z);
+		glRotatef(x_move,0,1,0);
+		glRotatef(y_move,0,1,0);
+		glTranslatef(-gaze_x,-gaze_y,-gaze_z);
+		glGetDoublev(GL_MODELVIEW,mother_trackball);
+
+	}
 
 
 }
@@ -343,18 +377,12 @@ void display_callback( void ){
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	//glTranslatef( 0.0f, 0.0f, mother_eye_z );
 	gluLookAt(mother_eye_x, mother_eye_y, mother_eye_z, mother_lookat_x, mother_lookat_y, mother_lookat_z,
 		mother_up_x, mother_up_y, mother_up_z);
+	//glMultMatrixd(mother_trackball);
 
-	GLdouble params[16] = {0};
-	glGetDoublev(GL_MODELVIEW_MATRIX,params);
-	for (int i =0;i<16;i++) {
-		if (i % 4 == 0)
-			printf("\n");
-		printf("%f ", params[i]);
-	}
-			printf("\n");
+
+	
 
 	if (!paused) {
 		update_soloar_system();
@@ -405,6 +433,7 @@ void idle( int value ){
 	// set a timer to call this function again after the
 	// required number of milliseconds
 	glutTimerFunc( dt, idle, 0 );
+
 }
 
 
