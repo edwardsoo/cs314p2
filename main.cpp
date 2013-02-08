@@ -48,8 +48,6 @@ int disp_width=512, disp_height=512;
 ship mother;
 ship scout;
 
-GLdouble *mother_trackball;
-
 
 bool paused = 0;
 bool scout_ctrl = false;
@@ -123,13 +121,6 @@ void init(){
 		obj_orbit_rots[i] = rand() % 360;
 	}
 
-
-	// set trackball matrix to identity
-	glPushMatrix();
-	glLoadIdentity();
-	/*mother_trackball = new GLdouble[16]();
-	glGetDoublev(GL_MODELVIEW, mother_trackball);*/
-	glPopMatrix();
 }
 
 void debug_matrix(GLfloat* m) {
@@ -197,23 +188,7 @@ void motion_callback(int x, int y) {
 		prev_x = x;
 		prev_y = y;
 	}
-
 	glPushMatrix();
-
-	if (current_window == mother_window) {
-		gaze_x = mother.x - mother.lookat_x;
-		gaze_y = mother.y - mother.lookat_y;
-		gaze_z = mother.z - mother.lookat_z;
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glTranslatef(gaze_x,gaze_y,gaze_z);
-		glRotatef(x_move,0,1,0);
-		glRotatef(y_move,0,1,0);
-		glTranslatef(-gaze_x,-gaze_y,-gaze_z);
-		glGetDoublev(GL_MODELVIEW,mother_trackball);
-
-	}
-
 
 }
 
