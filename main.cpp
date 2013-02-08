@@ -239,18 +239,89 @@ void keyboard_callback( unsigned char key, int x, int y ){
 	case 'p':
 		paused = !paused;
 		break;
-	case 'z':
-		printf("%d\n",scout);
+	case 'a':
 		if (scout)
-			scout_z += EYE_MOVE_UNIT;
+			scout_lookat_x += LOOKAT_MOVE_UNIT;
 		else
-			mother_z += EYE_MOVE_UNIT;
+			mother_lookat_x += LOOKAT_MOVE_UNIT;
 		break;
-	case 'Z':
+	case 'A':
 		if (scout)
-			scout_z -= EYE_MOVE_UNIT;
+			scout_lookat_x -= LOOKAT_MOVE_UNIT;
 		else
-			mother_z -= EYE_MOVE_UNIT;
+			mother_lookat_x -= LOOKAT_MOVE_UNIT;
+		break;
+	case 'b':
+		if (scout)
+			scout_lookat_y += LOOKAT_MOVE_UNIT;
+		else
+			mother_lookat_y += LOOKAT_MOVE_UNIT;
+		break;
+	case 'B':
+		if (scout)
+			scout_lookat_y -= LOOKAT_MOVE_UNIT;
+		else
+			mother_lookat_y -= LOOKAT_MOVE_UNIT;
+		break;
+	case 'c':
+		if (scout)
+			scout_lookat_z += LOOKAT_MOVE_UNIT;
+		else
+			mother_lookat_z += LOOKAT_MOVE_UNIT;
+		break;
+	case 'C':
+		if (scout)
+			scout_lookat_z -= LOOKAT_MOVE_UNIT;
+		else
+			mother_lookat_z -= LOOKAT_MOVE_UNIT;
+		break;
+	case 'd':
+		if (scout)
+			scout_up_x += UP_MOVE_UNIT;
+		else
+			mother_up_x += UP_MOVE_UNIT;
+		break;
+	case 'D':
+		if (scout)
+			scout_up_x -= UP_MOVE_UNIT;
+		else
+			mother_up_x -= UP_MOVE_UNIT;
+		break;
+	case 'e':
+		if (scout)
+			scout_up_y += UP_MOVE_UNIT;
+		else
+			mother_up_y += UP_MOVE_UNIT;
+		break;
+	case 'E':
+		if (scout)
+			scout_up_y -= UP_MOVE_UNIT;
+		else
+			mother_up_y -= UP_MOVE_UNIT;
+		break;
+	case 'f':
+		if (scout)
+			scout_up_z += UP_MOVE_UNIT;
+		else
+			mother_up_z += UP_MOVE_UNIT;
+		break;
+	case 'F':
+		if (scout)
+			scout_up_z -= UP_MOVE_UNIT;
+		else
+			mother_up_z -= UP_MOVE_UNIT;
+		break;
+	case 'x':
+		if (scout)
+			scout_x += EYE_MOVE_UNIT;
+		else
+			mother_x += EYE_MOVE_UNIT;
+		break;
+	case 'X':
+		if (scout)
+			scout_x -= EYE_MOVE_UNIT;
+		else
+			mother_x -= EYE_MOVE_UNIT;
 		break;
 	case 'y':
 		if (scout)
@@ -264,17 +335,18 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		else
 			mother_y -= EYE_MOVE_UNIT;
 		break;
-	case 'x':
+	case 'z':
+		printf("%d\n",scout);
 		if (scout)
-			scout_x += EYE_MOVE_UNIT;
+			scout_z += EYE_MOVE_UNIT;
 		else
-			mother_x += EYE_MOVE_UNIT;
+			mother_z += EYE_MOVE_UNIT;
 		break;
-	case 'X':
+	case 'Z':
 		if (scout)
-			scout_x -= EYE_MOVE_UNIT;
+			scout_z -= EYE_MOVE_UNIT;
 		else
-			mother_x -= EYE_MOVE_UNIT;
+			mother_z -= EYE_MOVE_UNIT;
 		break;
 	case 62:
 		scout = false;
@@ -465,6 +537,7 @@ void display_callback( void ){
 
 		float del_x = mother_x-mother_lookat_x;
 		float del_y = mother_y-mother_lookat_y;
+		float del_z = mother_z-mother_lookat_z;	
 		glTranslatef(mother_x,mother_y,mother_z);
 		draw_mothership();
 		glPopMatrix();

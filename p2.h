@@ -1,4 +1,6 @@
 #define EYE_MOVE_UNIT 10.0f
+#define LOOKAT_MOVE_UNIT 5.0f
+#define UP_MOVE_UNIT 0.1f
 
 #define SPHERE_SLICES 16
 #define SPHERE_STACKS 16
@@ -21,7 +23,7 @@
 
 #define MOTHER_INIT_X 0
 #define MOTHER_INIT_Y 100
-#define MOTHER_INIT_Z 500
+#define MOTHER_INIT_Z 510
 
 #define SCOUT_BODY_SIZE 1.0
 #define SCOUT_WING_LENGTH 1.0
