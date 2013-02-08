@@ -24,6 +24,7 @@ typedef struct ship {
 	GLfloat x,y,z,lookat_x,lookat_y,lookat_z,up_x,up_y,up_z;
 	GLfloat current_m[16];
 	GLfloat yaw,roll,pitch,forward;
+	unsigned int mode;
 } ship;
 
 // Ships properties

@@ -22,8 +22,6 @@
 #include "p2.h"
 bool invert_pose( float *m );
 void reset();
-unsigned int mode = ABS_LOOK_AT;
-float move_speed = DEFAULT_SPEED;
 
 //////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
@@ -48,6 +46,8 @@ int disp_width=512, disp_height=512;
 ship mother;
 ship scout;
 
+float move_speed = DEFAULT_SPEED;
+unsigned int current_planet = SATURN;
 
 bool paused = 0;
 bool scout_ctrl = false;
@@ -61,6 +61,7 @@ float obj_spin_rots[NUM_SPHERE] = {0};
 float obj_orbit_rots[NUM_SPHERE] = {0};
 GLUquadricObj* spheres[NUM_SPHERE] = {0};
 GLUquadricObj* disks[NUM_DISKS] = {0};
+GLfloat planet_m[NUM_SPHERE][16] = {0};
 
 
 //////////////////////////////////////////////////////////////////
@@ -177,7 +178,6 @@ void mouse_callback(int button, int state, int x, int y) {
 void motion_callback(int x, int y) {
 	int current_window;
 	int x_move, y_move;
-	float gaze_x, gaze_y, gaze_z;
 
 	// retrieve the currently active window
 	current_window = glutGetWindow();
@@ -214,6 +214,7 @@ void reset() {
 	mother.yaw = 0;
 	mother.roll = 0;
 	mother.pitch = 0;
+	mother.mode = ABS_LOOK_AT;
 
 	scout.x = SCOUT_INIT_X;
 	scout.y = SCOUT_INIT_Y;
@@ -227,8 +228,8 @@ void reset() {
 	scout.yaw = 0;
 	scout.roll = 0;
 	scout.pitch = 0;
+	scout.mode = ABS_LOOK_AT;
 
-	mode = ABS_LOOK_AT;
 	move_speed = DEFAULT_SPEED;
 }
 
@@ -250,21 +251,21 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		break;
 	case 'w':
 		if (scout_ctrl) { 
-			if (mode&REL_FLYING) 
+			if (scout.mode&REL_FLYING) 
 				scout.forward += move_speed;
 		}
 		else {
-			if (mode&REL_FLYING)
+			if (mother.mode&REL_FLYING)
 				mother.forward += move_speed;
 		}
 		break;
 	case 's':
 		if (scout_ctrl) { 
-			if (mode&REL_FLYING) 
+			if (scout.mode&REL_FLYING) 
 				scout.forward -= move_speed;
 		}
 		else {
-			if (mode&REL_FLYING)
+			if (mother.mode&REL_FLYING)
 				mother.forward -= move_speed;
 		}
 		break;
@@ -275,35 +276,49 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		reset();
 		break;
 	case 'l':
-		mode = ABS_LOOK_AT;
-		break;
+		if (scout_ctrl) { 
+			scout.mode = ABS_LOOK_AT;
+		}
+		else {
+			mother.mode = ABS_LOOK_AT;
+		}
 	case 'r':
-		mode = REL_FLYING;
+		if (scout_ctrl) { 
+			scout.mode = REL_FLYING;
+		}
+		else {
+			mother.mode = REL_FLYING;
+		}
 		break;
 	case 'g':
-		mode = GEO_SYNC;
+		if (scout_ctrl) { 
+			scout.mode = GEO_SYNC;
+		}
+		else {
+			mother.mode = GEO_SYNC;
+		}
 		break;
 	case 'q':
 		if (scout_ctrl) { 
-			if (mode&REL_FLYING) 
+			if (scout.mode&REL_FLYING) 
 				scout.yaw -= ROTATE_UNIT;
 		}
 		else {
-			if (mode&REL_FLYING)
+			if (mother.mode&REL_FLYING)
 				mother.yaw -= ROTATE_UNIT;
 		}
 		break;
 	case 'a':
 		if (scout_ctrl) {
-			if (mode&ABS_LOOK_AT)
+			if (scout.mode&ABS_LOOK_AT)
 				scout.lookat_x += LOOKAT_MOVE_UNIT;
-			if (mode&REL_FLYING)
+			if (scout.mode&REL_FLYING)
 				scout.roll -= ROTATE_UNIT;
 		}
 		else {
-			if (mode&ABS_LOOK_AT)
+			if (mother.mode&ABS_LOOK_AT)
 				mother.lookat_x += LOOKAT_MOVE_UNIT;
-			if (mode&REL_FLYING)
+			if (mother.mode&REL_FLYING)
 				mother.roll -= ROTATE_UNIT;
 		}
 		break;
@@ -327,15 +342,15 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		break;
 	case 'c':
 		if (scout_ctrl) {
-			if (mode&ABS_LOOK_AT)
+			if (scout.mode&ABS_LOOK_AT)
 				scout.lookat_z += LOOKAT_MOVE_UNIT;
-			if (mode&REL_FLYING)
+			if (scout.mode&REL_FLYING)
 				scout.pitch += ROTATE_UNIT;
 		}
 		else {
-			if (mode&ABS_LOOK_AT)
+			if (mother.mode&ABS_LOOK_AT)
 				mother.lookat_z += LOOKAT_MOVE_UNIT;
-			if (mode&REL_FLYING)
+			if (mother.mode&REL_FLYING)
 				mother.pitch += ROTATE_UNIT;
 		}
 		break;
@@ -347,15 +362,15 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		break;
 	case 'd':
 		if (scout_ctrl) {
-			if (mode&ABS_LOOK_AT)
+			if (scout.mode&ABS_LOOK_AT)
 				scout.up_x += UP_MOVE_UNIT;
-			if (mode&REL_FLYING)
+			if (scout.mode&REL_FLYING)
 				scout.roll += ROTATE_UNIT;
 		}
 		else {
-			if (mode&ABS_LOOK_AT)
+			if (mother.mode&ABS_LOOK_AT)
 				mother.up_x += UP_MOVE_UNIT;
-			if (mode&REL_FLYING)
+			if (mother.mode&REL_FLYING)
 				mother.roll += ROTATE_UNIT;
 		}
 		break;
@@ -367,15 +382,15 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		break;
 	case 'e':
 		if (scout_ctrl){
-			if (mode&ABS_LOOK_AT) 
+			if (scout.mode&ABS_LOOK_AT) 
 				scout.up_y += UP_MOVE_UNIT;
-			else if (mode&REL_FLYING)
+			else if (scout.mode&REL_FLYING)
 				scout.yaw += ROTATE_UNIT;
 		}
 		else {
-			if (mode&ABS_LOOK_AT)
+			if (mother.mode&ABS_LOOK_AT)
 				mother.up_y += UP_MOVE_UNIT;
-			else if (mode&REL_FLYING)
+			else if (mother.mode&REL_FLYING)
 				mother.yaw += ROTATE_UNIT;
 		}
 		break;
@@ -399,15 +414,15 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		break;
 	case 'x':
 		if (scout_ctrl){
-			if (mode&ABS_LOOK_AT)
+			if (scout.mode&ABS_LOOK_AT)
 				scout.x += move_speed;
-			if (mode&REL_FLYING)
+			if (scout.mode&REL_FLYING)
 				scout.pitch -= ROTATE_UNIT;
 		}
 		else {
-			if (mode&ABS_LOOK_AT)
+			if (mother.mode&ABS_LOOK_AT)
 				mother.x += move_speed;
-			if (mode&REL_FLYING)
+			if (mother.mode&REL_FLYING)
 				mother.pitch -= ROTATE_UNIT;
 		}
 		break;
@@ -554,6 +569,7 @@ void draw_orbit_and_planet(int i) {
 		OBJ_ORBIT_RADIUS[i]+ORBIT_WEIGHT/2,DISK_SLICES,DISK_LOOPS);
 	glRotatef(obj_orbit_rots[i], 0, 0, 1.0);
 	glTranslatef(OBJ_ORBIT_RADIUS[i], 0, 0);
+	glGetFloatv(GL_MODELVIEW_MATRIX,planet_m[i]);
 	glColor3f(OBJ_COLORS[i][RED],OBJ_COLORS[i][GREEN],OBJ_COLORS[i][BLUE]);
 	gluSphere(spheres[i], OBJ_RADIUS[i], SPHERE_SLICES, SPHERE_STACKS); 
 	if (i == SATURN) {
@@ -614,20 +630,6 @@ void display_callback( void ){
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	/*glLoadIdentity();
-	gluLookAt(mother.x, mother.y, mother.z, mother.lookat_x, mother.lookat_y, mother.lookat_z,
-	mother.up_x, mother.up_y, mother.up_z);
-	glGetFloatv(GL_MODELVIEW_MATRIX,mother.current_m);
-	debug_matrix(mother.current_m);
-
-	glLoadIdentity();
-	gluLookAt(scout.x, scout.y, scout.z, scout.lookat_x, scout.lookat_y, scout.lookat_z,
-	scout.up_x, scout.up_y, scout.up_z);	
-	glGetFloatv(GL_MODELVIEW_MATRIX,scout.current_m);
-	debug_matrix(scout.current_m);
-	glLoadIdentity();*/
-
-
 	if (current_window == mother_window) {
 		glMultMatrixf(mother.current_m);
 
@@ -683,18 +685,45 @@ void rel_flying_matrix(ship* ship) {
 	glPopMatrix();
 }
 
+void geo_sync_matrix(ship* ship) {
+	GLfloat tmp_m[16];
+
+	// get transformation from origin to planet
+	glPushMatrix();
+	glLoadIdentity();
+	glRotatef(obj_orbit_rots[current_planet], 0, 1, 0);
+	glTranslatef(OBJ_ORBIT_RADIUS[current_planet], 0, 0);
+	glGetFloatv(GL_MODELVIEW_MATRIX,tmp_m);
+	glPopMatrix();
+
+	glPushMatrix();
+	glLoadIdentity();
+	//gluLookAt(ship->x, ship->y, ship->z, ship->lookat_x, ship->lookat_y, ship->lookat_z,
+		//ship->up_x, ship->up_y, ship->up_z);
+/*
+	invert_pose(tmp_m);
+	glMultMatrixf(tmp_m);*/
+	glTranslatef(0,0,OBJ_ORBIT_RADIUS[current_planet]);
+	glGetFloatv(GL_MODELVIEW_MATRIX,ship->current_m);
+	glPopMatrix();
+}
+
 void getCurrentMatrice() {
 	glPushMatrix();
 	glMatrixMode(GL_MODELVIEW);
-	if (mode & ABS_LOOK_AT) {
-		abs_lookat_matrix(&mother);
+	if (scout.mode & ABS_LOOK_AT) {
 		abs_lookat_matrix(&scout);
-
-	} else if (mode & REL_FLYING) {
-		rel_flying_matrix(&mother);
+	} else if (scout.mode & REL_FLYING) {
 		rel_flying_matrix(&scout);
-	} else if (mode & GEO_SYNC) {
+	} else if (scout.mode & GEO_SYNC) {
+		geo_sync_matrix(&scout);
+	}
 
+	if (mother.mode & ABS_LOOK_AT) {
+		abs_lookat_matrix(&mother);
+	} else if (mother.mode & REL_FLYING) {
+		rel_flying_matrix(&mother);
+	} else if (mother.mode & GEO_SYNC) {
 	}
 
 	//debug_matrix(scout.current_m);
