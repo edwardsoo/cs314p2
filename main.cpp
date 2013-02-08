@@ -44,15 +44,25 @@ int disp_width=512, disp_height=512;
 
 // cameras
 GLdouble *mother_trackball;;
-float mother_eye_x = 0;
-float mother_eye_y = 0;
-float mother_eye_z = MIN_MOTHER_EYE_Z;
+float mother_x = MOTHER_INIT_X;
+float mother_y = MOTHER_INIT_Y;
+float mother_z = MOTHER_INIT_Z;
 float mother_lookat_x = 0;
 float mother_lookat_y = 0;
 float mother_lookat_z = 0;
 float mother_up_x = 0;
 float mother_up_y = 1;
 float mother_up_z = 0;
+
+float scout_x = SCOUT_INIT_X;
+float scout_y = SCOUT_INIT_Y;
+float scout_z = SCOUT_INIT_Z;
+float scout_lookat_x = 0;
+float scout_lookat_y = 0;
+float scout_lookat_z = 0;
+float scout_up_x = 0;
+float scout_up_y = 1;
+float scout_up_z = 0;
 
 bool paused = 0;
 
@@ -124,7 +134,7 @@ void init(){
 		obj_orbit_rots[i] = rand() % 360;
 	}
 
-	
+
 	// set trackball matrix to identity
 	glPushMatrix();
 	glLoadIdentity();
@@ -194,9 +204,9 @@ void motion_callback(int x, int y) {
 	glPushMatrix();
 
 	if (current_window == mother_window) {
-		gaze_x = mother_eye_x - mother_lookat_x;
-		gaze_y = mother_eye_y - mother_lookat_y;
-		gaze_z = mother_eye_z - mother_lookat_z;
+		gaze_x = mother_x - mother_lookat_x;
+		gaze_y = mother_y - mother_lookat_y;
+		gaze_z = mother_z - mother_lookat_z;
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		glTranslatef(gaze_x,gaze_y,gaze_z);
@@ -229,10 +239,22 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		paused = !paused;
 		break;
 	case 'z':
-		mother_eye_z += EYE_MOVE_UNIT;
+		mother_z += EYE_MOVE_UNIT;
 		break;
 	case 'Z':
-		mother_eye_z -= EYE_MOVE_UNIT;
+		mother_z -= EYE_MOVE_UNIT;
+		break;
+	case 'y':
+		mother_y += EYE_MOVE_UNIT;
+		break;
+	case 'Y':
+		mother_y -= EYE_MOVE_UNIT;
+		break;
+	case 'x':
+		mother_x += EYE_MOVE_UNIT;
+		break;
+	case 'X':
+		mother_x -= EYE_MOVE_UNIT;
 		break;
 	default:
 		break;
@@ -268,6 +290,20 @@ void draw_box(float x, float y, float z) {
 	glPopMatrix();
 }
 
+void draw_cone(float x, float y, float z) {	
+	glPushMatrix();
+	glScalef(x,y,z);
+	glutSolidCone(1,1,CONE_SLICES,CONE_STACKS);
+	glPopMatrix();
+}
+
+void draw_scaled_icosahedron(float x, float y, float z) {	
+	glPushMatrix();
+	glScalef(x,y,z);
+	glutSolidIcosahedron();
+	glPopMatrix();
+}
+
 void draw_scoutship_wing() {
 	// wing
 	glPushMatrix();
@@ -281,13 +317,13 @@ void draw_scoutship_wing() {
 	glPushMatrix();
 	// wing bottom panel
 	glTranslatef(0,-SCOUT_PANEL_HEIGHT/2,0);
-	glRotatef(30,1,0,0);
+	glRotatef(SCOUT_PANEL_ANGLE,1,0,0);
 	glTranslatef(0,-SCOUT_PANEL_HEIGHT/2,0);
 	draw_box(SCOUT_PANEL_LENDTH,SCOUT_PANEL_HEIGHT,SCOUT_PANEL_WIDTH);
 	glPopMatrix();
 	// wing top panel
 	glTranslatef(0,SCOUT_PANEL_HEIGHT/2,0);
-	glRotatef(-30,1,0,0);
+	glRotatef(-SCOUT_PANEL_ANGLE,1,0,0);
 	glTranslatef(0,SCOUT_PANEL_HEIGHT/2,0);
 	draw_box(SCOUT_PANEL_LENDTH,SCOUT_PANEL_HEIGHT,SCOUT_PANEL_WIDTH);
 	glPopMatrix();
@@ -297,15 +333,43 @@ void draw_scoutship_wing() {
 void draw_scoutship() {
 	// main body
 	glPushMatrix();
-	glColor3f(GREY);
-	draw_box(SCOUT_CABIN_WDITH,SCOUT_CABIN_WDITH,SCOUT_CABIN_LENGTH);
 	glColor3f(WHITE);
-	draw_box(SCOUT_BODY_SIZE,SCOUT_BODY_SIZE,SCOUT_BODY_SIZE);
+	draw_scaled_icosahedron(SCOUT_BODY_SIZE,SCOUT_BODY_SIZE,SCOUT_BODY_SIZE);
 	// right wing
 	draw_scoutship_wing();
 	// left wing
 	glRotatef(180,0,1,0);
 	draw_scoutship_wing();
+	glPopMatrix();
+}
+
+void draw_mothership() {
+	// main body
+	glPushMatrix();
+	glColor3f(WHITE);
+	draw_cone(MOTHER_BODY_WIDTH,MOTHER_BODY_HEIGHT,MOTHER_BODY_LENGTH);
+	glTranslatef(0,MOTHER_BODY_HEIGHT,MOTHER_PLATFORM_LENGTH/2);
+	draw_box(MOTHER_PLATFORM_WIDTH,MOTHER_PLATFORM_HEIGHT,MOTHER_PLATFORM_LENGTH);
+	glTranslatef(0,MOTHER_PLATFORM_HEIGHT/4,0);
+	draw_box(MOTHER_DECK_WIDTH,MOTHER_DECK_HEIGHT,MOTHER_DECK_LENDTH);
+	glPopMatrix();
+}
+
+void draw_orbit_and_planet(int i) {
+	glPushMatrix();
+	glRotatef(90,1.0,0,0);
+	gluDisk(disks[i],OBJ_ORBIT_RADIUS[i]-ORBIT_WEIGHT/2,
+		OBJ_ORBIT_RADIUS[i]+ORBIT_WEIGHT/2,DISK_SLICES,DISK_LOOPS);
+	glRotatef(obj_orbit_rots[i], 0, 0, 1.0);
+	glTranslatef(OBJ_ORBIT_RADIUS[i], 0, 0);
+	glColor3f(OBJ_COLORS[i][RED],OBJ_COLORS[i][GREEN],OBJ_COLORS[i][BLUE]);
+	gluSphere(spheres[i], OBJ_RADIUS[i], SPHERE_SLICES, SPHERE_STACKS); 
+	if (i == SATURN) {
+		glRotatef(SATURN_RING_ANGLE, 0,1.0,0);
+		glColor4f(BROWN,ORBIT_ALPHA);
+		gluDisk(disks[SATURN_RING],SATURN_RING_INNER_RAD,
+			SATURN_RING_OUTER_RAD,DISK_SLICES,DISK_LOOPS);
+	}
 	glPopMatrix();
 }
 
@@ -319,37 +383,16 @@ void draw_solar_system() {
 		}
 		switch(i) {
 		case SUN:
-			glRotatef(obj_spin_rots[i], 0, 0, 1.0);
+			glRotatef(obj_spin_rots[i], 0, 1.0, 0);
 			glColor3f(OBJ_COLORS[i][RED],OBJ_COLORS[i][GREEN],OBJ_COLORS[i][BLUE]);
 			gluSphere(spheres[i], OBJ_RADIUS[i], SPHERE_SLICES, SPHERE_STACKS);
 			break;
 		case MOON:
-			glRotatef(obj_orbit_rots[EARTH], 0, 0, 1.0);
+			glRotatef(obj_orbit_rots[EARTH], 0, 1.0, 0);
 			glTranslatef(OBJ_ORBIT_RADIUS[EARTH], 0, 0);
-			glColor4f(WHITE,ORBIT_ALPHA);
-			gluDisk(disks[i],OBJ_ORBIT_RADIUS[i]-ORBIT_WEIGHT/2,
-				OBJ_ORBIT_RADIUS[i]+ORBIT_WEIGHT/2,DISK_SLICES,DISK_LOOPS);
-			glRotatef(obj_orbit_rots[MOON], 0, 0, 1.0);
-			glTranslatef(OBJ_ORBIT_RADIUS[MOON], 0, 0);
-			glColor3f(OBJ_COLORS[i][RED],OBJ_COLORS[i][GREEN],OBJ_COLORS[i][BLUE]);
-			gluSphere(spheres[i], OBJ_RADIUS[i], SPHERE_SLICES, SPHERE_STACKS); 
-
-			break;
 		default:
 			glColor4f(WHITE,ORBIT_ALPHA);
-			gluDisk(disks[i],OBJ_ORBIT_RADIUS[i]-ORBIT_WEIGHT/2,
-				OBJ_ORBIT_RADIUS[i]+ORBIT_WEIGHT/2,DISK_SLICES,DISK_LOOPS);
-			glRotatef(obj_orbit_rots[i], 0, 0, 1.0);
-			glTranslatef(OBJ_ORBIT_RADIUS[i], 0, 0);
-			glRotatef(obj_spin_rots[i], 0, 0, 1.0);
-			glColor3f(OBJ_COLORS[i][RED],OBJ_COLORS[i][GREEN],OBJ_COLORS[i][BLUE]);
-			gluSphere(spheres[i], OBJ_RADIUS[i], SPHERE_SLICES, SPHERE_STACKS); 
-			if (i == SATURN) {
-				glRotatef(SATURN_RING_ANGLE, 0,0,1.0);
-				glColor4f(BROWN,ORBIT_ALPHA);
-				gluDisk(disks[SATURN_RING],SATURN_RING_INNER_RAD,
-					SATURN_RING_OUTER_RAD,DISK_SLICES,DISK_LOOPS);
-			}
+			draw_orbit_and_planet(i);
 			break;
 		}
 		glPopMatrix();
@@ -377,22 +420,29 @@ void display_callback( void ){
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	gluLookAt(mother_eye_x, mother_eye_y, mother_eye_z, mother_lookat_x, mother_lookat_y, mother_lookat_z,
-		mother_up_x, mother_up_y, mother_up_z);
-	//glMultMatrixd(mother_trackball);
 
+	if (current_window == mother_window) {
+		gluLookAt(mother_x, mother_y, mother_z, mother_lookat_x, mother_lookat_y, mother_lookat_z,
+			mother_up_x, mother_up_y, mother_up_z);
 
-	
+		glPushMatrix();
+		glTranslatef(scout_x,scout_y,scout_z);
+		draw_scoutship();
+		glPopMatrix();
+	} else if (current_window == scout_window) {
+		gluLookAt(scout_x, scout_y, scout_z, scout_lookat_x, scout_lookat_y, scout_lookat_z,
+			scout_up_x, scout_up_y, scout_up_z);	
+
+		glPushMatrix();
+		glTranslatef(mother_x,mother_y,mother_z);
+		draw_mothership();
+		glPopMatrix();
+	}
 
 	if (!paused) {
 		update_soloar_system();
 	}
 	draw_solar_system();
-
-	glPushMatrix();
-	glTranslatef(0,0,MIN_MOTHER_EYE_Z+5);
-	draw_scoutship();
-	glPopMatrix();
 
 	// swap the front and back buffers to display the scene
 	glutSetWindow( current_window );
@@ -485,130 +535,130 @@ int main( int argc, char **argv ){
 
 // inversion routine originally from MESA
 bool invert_pose( float *m ){
-float inv[16], det;
-int i;
+	float inv[16], det;
+	int i;
 
-inv[0] = m[5] * m[10] * m[15] -
-m[5] * m[11] * m[14] -
-m[9] * m[6] * m[15] +
-m[9] * m[7] * m[14] +
-m[13] * m[6] * m[11] -
-m[13] * m[7] * m[10];
+	inv[0] = m[5] * m[10] * m[15] -
+		m[5] * m[11] * m[14] -
+		m[9] * m[6] * m[15] +
+		m[9] * m[7] * m[14] +
+		m[13] * m[6] * m[11] -
+		m[13] * m[7] * m[10];
 
-inv[4] = -m[4] * m[10] * m[15] +
-m[4] * m[11] * m[14] +
-m[8] * m[6] * m[15] -
-m[8] * m[7] * m[14] -
-m[12] * m[6] * m[11] +
-m[12] * m[7] * m[10];
+	inv[4] = -m[4] * m[10] * m[15] +
+		m[4] * m[11] * m[14] +
+		m[8] * m[6] * m[15] -
+		m[8] * m[7] * m[14] -
+		m[12] * m[6] * m[11] +
+		m[12] * m[7] * m[10];
 
-inv[8] = m[4] * m[9] * m[15] -
-m[4] * m[11] * m[13] -
-m[8] * m[5] * m[15] +
-m[8] * m[7] * m[13] +
-m[12] * m[5] * m[11] -
-m[12] * m[7] * m[9];
+	inv[8] = m[4] * m[9] * m[15] -
+		m[4] * m[11] * m[13] -
+		m[8] * m[5] * m[15] +
+		m[8] * m[7] * m[13] +
+		m[12] * m[5] * m[11] -
+		m[12] * m[7] * m[9];
 
-inv[12] = -m[4] * m[9] * m[14] +
-m[4] * m[10] * m[13] +
-m[8] * m[5] * m[14] -
-m[8] * m[6] * m[13] -
-m[12] * m[5] * m[10] +
-m[12] * m[6] * m[9];
+	inv[12] = -m[4] * m[9] * m[14] +
+		m[4] * m[10] * m[13] +
+		m[8] * m[5] * m[14] -
+		m[8] * m[6] * m[13] -
+		m[12] * m[5] * m[10] +
+		m[12] * m[6] * m[9];
 
-inv[1] = -m[1] * m[10] * m[15] +
-m[1] * m[11] * m[14] +
-m[9] * m[2] * m[15] -
-m[9] * m[3] * m[14] -
-m[13] * m[2] * m[11] +
-m[13] * m[3] * m[10];
+	inv[1] = -m[1] * m[10] * m[15] +
+		m[1] * m[11] * m[14] +
+		m[9] * m[2] * m[15] -
+		m[9] * m[3] * m[14] -
+		m[13] * m[2] * m[11] +
+		m[13] * m[3] * m[10];
 
-inv[5] = m[0] * m[10] * m[15] -
-m[0] * m[11] * m[14] -
-m[8] * m[2] * m[15] +
-m[8] * m[3] * m[14] +
-m[12] * m[2] * m[11] -
-m[12] * m[3] * m[10];
+	inv[5] = m[0] * m[10] * m[15] -
+		m[0] * m[11] * m[14] -
+		m[8] * m[2] * m[15] +
+		m[8] * m[3] * m[14] +
+		m[12] * m[2] * m[11] -
+		m[12] * m[3] * m[10];
 
-inv[9] = -m[0] * m[9] * m[15] +
-m[0] * m[11] * m[13] +
-m[8] * m[1] * m[15] -
-m[8] * m[3] * m[13] -
-m[12] * m[1] * m[11] +
-m[12] * m[3] * m[9];
+	inv[9] = -m[0] * m[9] * m[15] +
+		m[0] * m[11] * m[13] +
+		m[8] * m[1] * m[15] -
+		m[8] * m[3] * m[13] -
+		m[12] * m[1] * m[11] +
+		m[12] * m[3] * m[9];
 
-inv[13] = m[0] * m[9] * m[14] -
-m[0] * m[10] * m[13] -
-m[8] * m[1] * m[14] +
-m[8] * m[2] * m[13] +
-m[12] * m[1] * m[10] -
-m[12] * m[2] * m[9];
+	inv[13] = m[0] * m[9] * m[14] -
+		m[0] * m[10] * m[13] -
+		m[8] * m[1] * m[14] +
+		m[8] * m[2] * m[13] +
+		m[12] * m[1] * m[10] -
+		m[12] * m[2] * m[9];
 
-inv[2] = m[1] * m[6] * m[15] -
-m[1] * m[7] * m[14] -
-m[5] * m[2] * m[15] +
-m[5] * m[3] * m[14] +
-m[13] * m[2] * m[7] -
-m[13] * m[3] * m[6];
+	inv[2] = m[1] * m[6] * m[15] -
+		m[1] * m[7] * m[14] -
+		m[5] * m[2] * m[15] +
+		m[5] * m[3] * m[14] +
+		m[13] * m[2] * m[7] -
+		m[13] * m[3] * m[6];
 
-inv[6] = -m[0] * m[6] * m[15] +
-m[0] * m[7] * m[14] +
-m[4] * m[2] * m[15] -
-m[4] * m[3] * m[14] -
-m[12] * m[2] * m[7] +
-m[12] * m[3] * m[6];
+	inv[6] = -m[0] * m[6] * m[15] +
+		m[0] * m[7] * m[14] +
+		m[4] * m[2] * m[15] -
+		m[4] * m[3] * m[14] -
+		m[12] * m[2] * m[7] +
+		m[12] * m[3] * m[6];
 
-inv[10] = m[0] * m[5] * m[15] -
-m[0] * m[7] * m[13] -
-m[4] * m[1] * m[15] +
-m[4] * m[3] * m[13] +
-m[12] * m[1] * m[7] -
-m[12] * m[3] * m[5];
+	inv[10] = m[0] * m[5] * m[15] -
+		m[0] * m[7] * m[13] -
+		m[4] * m[1] * m[15] +
+		m[4] * m[3] * m[13] +
+		m[12] * m[1] * m[7] -
+		m[12] * m[3] * m[5];
 
-inv[14] = -m[0] * m[5] * m[14] +
-m[0] * m[6] * m[13] +
-m[4] * m[1] * m[14] -
-m[4] * m[2] * m[13] -
-m[12] * m[1] * m[6] +
-m[12] * m[2] * m[5];
+	inv[14] = -m[0] * m[5] * m[14] +
+		m[0] * m[6] * m[13] +
+		m[4] * m[1] * m[14] -
+		m[4] * m[2] * m[13] -
+		m[12] * m[1] * m[6] +
+		m[12] * m[2] * m[5];
 
-inv[3] = -m[1] * m[6] * m[11] +
-m[1] * m[7] * m[10] +
-m[5] * m[2] * m[11] -
-m[5] * m[3] * m[10] -
-m[9] * m[2] * m[7] +
-m[9] * m[3] * m[6];
+	inv[3] = -m[1] * m[6] * m[11] +
+		m[1] * m[7] * m[10] +
+		m[5] * m[2] * m[11] -
+		m[5] * m[3] * m[10] -
+		m[9] * m[2] * m[7] +
+		m[9] * m[3] * m[6];
 
-inv[7] = m[0] * m[6] * m[11] -
-m[0] * m[7] * m[10] -
-m[4] * m[2] * m[11] +
-m[4] * m[3] * m[10] +
-m[8] * m[2] * m[7] -
-m[8] * m[3] * m[6];
+	inv[7] = m[0] * m[6] * m[11] -
+		m[0] * m[7] * m[10] -
+		m[4] * m[2] * m[11] +
+		m[4] * m[3] * m[10] +
+		m[8] * m[2] * m[7] -
+		m[8] * m[3] * m[6];
 
-inv[11] = -m[0] * m[5] * m[11] +
-m[0] * m[7] * m[9] +
-m[4] * m[1] * m[11] -
-m[4] * m[3] * m[9] -
-m[8] * m[1] * m[7] +
-m[8] * m[3] * m[5];
+	inv[11] = -m[0] * m[5] * m[11] +
+		m[0] * m[7] * m[9] +
+		m[4] * m[1] * m[11] -
+		m[4] * m[3] * m[9] -
+		m[8] * m[1] * m[7] +
+		m[8] * m[3] * m[5];
 
-inv[15] = m[0] * m[5] * m[10] -
-m[0] * m[6] * m[9] -
-m[4] * m[1] * m[10] +
-m[4] * m[2] * m[9] +
-m[8] * m[1] * m[6] -
-m[8] * m[2] * m[5];
+	inv[15] = m[0] * m[5] * m[10] -
+		m[0] * m[6] * m[9] -
+		m[4] * m[1] * m[10] +
+		m[4] * m[2] * m[9] +
+		m[8] * m[1] * m[6] -
+		m[8] * m[2] * m[5];
 
-det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+	det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
 
-if (det == 0)
-return false;
+	if (det == 0)
+		return false;
 
-det = 1.0 / det;
+	det = 1.0 / det;
 
-for (i = 0; i < 16; i++)
-m[i] = inv[i] * det;
+	for (i = 0; i < 16; i++)
+		m[i] = inv[i] * det;
 
-return true;
+	return true;
 }
