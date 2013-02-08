@@ -1,6 +1,9 @@
-#define EYE_MOVE_UNIT 10.0f
+#define DEFAULT_SPEED 10.0f
+#define SPEED_UNIT 1.0f
+#define SPEED_LIMIT DEFAULT_SPEED*10
 #define LOOKAT_MOVE_UNIT 5.0f
 #define UP_MOVE_UNIT 0.1f
+#define ROTATE_UNIT 1.0f
 
 #define SPHERE_SLICES 16
 #define SPHERE_STACKS 16
@@ -20,7 +23,7 @@
 typedef struct ship {
 	GLfloat x,y,z,lookat_x,lookat_y,lookat_z,up_x,up_y,up_z;
 	GLfloat current_m[16];
-	GLfloat yaw,roll,pitch;
+	GLfloat yaw,roll,pitch,forward;
 } ship;
 
 // Ships properties
@@ -157,5 +160,7 @@ const float OBJ_COLORS[NUM_SPHERE][COLOR_BASES] = {SUN_COLOR,MERCURY_COLOR,VENUS
 	MARS_COLOR,JUPITER_COLOR,SATURN_COLOR,URANUS_COLOR,NEPTUNE_COLOR,PLUTO_COLOR,MOON_COLOR};
 
 
-
-
+// Modes
+#define ABS_LOOK_AT 0x1
+#define REL_FLYING ABS_LOOK_AT << 1
+#define GEO_SYNC REL_FLYING << 1

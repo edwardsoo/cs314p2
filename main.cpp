@@ -22,6 +22,8 @@
 #include "p2.h"
 bool invert_pose( float *m );
 void reset();
+unsigned int mode = ABS_LOOK_AT;
+float move_speed = DEFAULT_SPEED;
 
 //////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
@@ -143,6 +145,12 @@ void cleanup(){
 	/////////////////////////////////////////////////////////////
 	/// TODO: Put your teardown code here! //////////////////////
 	/////////////////////////////////////////////////////////////
+	for (int i = 0; i <NUM_SPHERE; i++) {
+		delete spheres[i];
+	}
+	for (int i = 0; i <NUM_DISKS; i++) {
+		delete disks[i];
+	}
 
 }
 
@@ -157,7 +165,7 @@ void cleanup(){
 // mouse callback
 void mouse_callback(int button, int state, int x, int y) {
 
-	printf("button:%d, state:%d\n", button, state);
+	//printf("button:%d, state:%d\n", button, state);
 	switch (button)
 	{
 	case GLUT_LEFT_BUTTON:
@@ -228,6 +236,9 @@ void reset() {
 	mother.up_x = 0;
 	mother.up_y = 1;
 	mother.up_z = 0;
+	mother.yaw = 0;
+	mother.roll = 0;
+	mother.pitch = 0;
 
 	scout.x = SCOUT_INIT_X;
 	scout.y = SCOUT_INIT_Y;
@@ -238,6 +249,12 @@ void reset() {
 	scout.up_x = 0;
 	scout.up_y = 1;
 	scout.up_z = 0;
+	scout.yaw = 0;
+	scout.roll = 0;
+	scout.pitch = 0;
+
+	mode = ABS_LOOK_AT;
+	move_speed = DEFAULT_SPEED;
 }
 
 // keyboard callback
@@ -246,17 +263,74 @@ void keyboard_callback( unsigned char key, int x, int y ){
 	case 27:
 		quit = true;
 		break;
+	case '-':
+		move_speed -= SPEED_UNIT;
+		if (move_speed < 0)
+			move_speed = 0;
+		break;
+	case '=':
+		move_speed += SPEED_UNIT;
+		if (move_speed > SPEED_LIMIT)
+			move_speed = SPEED_LIMIT;
+		break;
+	case 'w':
+		if (scout_ctrl) { 
+			if (mode&REL_FLYING) 
+				scout.forward += move_speed;
+		}
+		else {
+			if (mode&REL_FLYING)
+				mother.forward += move_speed;
+		}
+		break;
+	case 's':
+		if (scout_ctrl) { 
+			if (mode&REL_FLYING) 
+				scout.forward -= move_speed;
+		}
+		else {
+			if (mode&REL_FLYING)
+				mother.forward -= move_speed;
+		}
+		break;
 	case 'p':
 		paused = !paused;
 		break;
 	case 'm':
 		reset();
 		break;
+	case 'l':
+		mode = ABS_LOOK_AT;
+		break;
+	case 'r':
+		mode = REL_FLYING;
+		break;
+	case 'g':
+		mode = GEO_SYNC;
+		break;
+	case 'q':
+		if (scout_ctrl) { 
+			if (mode&REL_FLYING) 
+				scout.yaw -= ROTATE_UNIT;
+		}
+		else {
+			if (mode&REL_FLYING)
+				mother.yaw -= ROTATE_UNIT;
+		}
+		break;
 	case 'a':
-		if (scout_ctrl)
-			scout.lookat_x += LOOKAT_MOVE_UNIT;
-		else
-			mother.lookat_x += LOOKAT_MOVE_UNIT;
+		if (scout_ctrl) {
+			if (mode&ABS_LOOK_AT)
+				scout.lookat_x += LOOKAT_MOVE_UNIT;
+			if (mode&REL_FLYING)
+				scout.roll -= ROTATE_UNIT;
+		}
+		else {
+			if (mode&ABS_LOOK_AT)
+				mother.lookat_x += LOOKAT_MOVE_UNIT;
+			if (mode&REL_FLYING)
+				mother.roll -= ROTATE_UNIT;
+		}
 		break;
 	case 'A':
 		if (scout_ctrl)
@@ -277,10 +351,18 @@ void keyboard_callback( unsigned char key, int x, int y ){
 			mother.lookat_y -= LOOKAT_MOVE_UNIT;
 		break;
 	case 'c':
-		if (scout_ctrl)
-			scout.lookat_z += LOOKAT_MOVE_UNIT;
-		else
-			mother.lookat_z += LOOKAT_MOVE_UNIT;
+		if (scout_ctrl) {
+			if (mode&ABS_LOOK_AT)
+				scout.lookat_z += LOOKAT_MOVE_UNIT;
+			if (mode&REL_FLYING)
+				scout.pitch += ROTATE_UNIT;
+		}
+		else {
+			if (mode&ABS_LOOK_AT)
+				mother.lookat_z += LOOKAT_MOVE_UNIT;
+			if (mode&REL_FLYING)
+				mother.pitch += ROTATE_UNIT;
+		}
 		break;
 	case 'C':
 		if (scout_ctrl)
@@ -289,10 +371,18 @@ void keyboard_callback( unsigned char key, int x, int y ){
 			mother.lookat_z -= LOOKAT_MOVE_UNIT;
 		break;
 	case 'd':
-		if (scout_ctrl)
-			scout.up_x += UP_MOVE_UNIT;
-		else
-			mother.up_x += UP_MOVE_UNIT;
+		if (scout_ctrl) {
+			if (mode&ABS_LOOK_AT)
+				scout.up_x += UP_MOVE_UNIT;
+			if (mode&REL_FLYING)
+				scout.roll += ROTATE_UNIT;
+		}
+		else {
+			if (mode&ABS_LOOK_AT)
+				mother.up_x += UP_MOVE_UNIT;
+			if (mode&REL_FLYING)
+				mother.roll += ROTATE_UNIT;
+		}
 		break;
 	case 'D':
 		if (scout_ctrl)
@@ -301,10 +391,18 @@ void keyboard_callback( unsigned char key, int x, int y ){
 			mother.up_x -= UP_MOVE_UNIT;
 		break;
 	case 'e':
-		if (scout_ctrl)
-			scout.up_y += UP_MOVE_UNIT;
-		else
-			mother.up_y += UP_MOVE_UNIT;
+		if (scout_ctrl){
+			if (mode&ABS_LOOK_AT) 
+				scout.up_y += UP_MOVE_UNIT;
+			else if (mode&REL_FLYING)
+				scout.yaw += ROTATE_UNIT;
+		}
+		else {
+			if (mode&ABS_LOOK_AT)
+				mother.up_y += UP_MOVE_UNIT;
+			else if (mode&REL_FLYING)
+				mother.yaw += ROTATE_UNIT;
+		}
 		break;
 	case 'E':
 		if (scout_ctrl)
@@ -325,40 +423,48 @@ void keyboard_callback( unsigned char key, int x, int y ){
 			mother.up_z -= UP_MOVE_UNIT;
 		break;
 	case 'x':
-		if (scout_ctrl)
-			scout.x += EYE_MOVE_UNIT;
-		else
-			mother.x += EYE_MOVE_UNIT;
+		if (scout_ctrl){
+			if (mode&ABS_LOOK_AT)
+				scout.x += move_speed;
+			if (mode&REL_FLYING)
+				scout.pitch -= ROTATE_UNIT;
+		}
+		else {
+			if (mode&ABS_LOOK_AT)
+				mother.x += move_speed;
+			if (mode&REL_FLYING)
+				mother.pitch -= ROTATE_UNIT;
+		}
 		break;
 	case 'X':
 		if (scout_ctrl)
-			scout.x -= EYE_MOVE_UNIT;
+			scout.x -= move_speed;
 		else
-			mother.x -= EYE_MOVE_UNIT;
+			mother.x -= move_speed;
 		break;
 	case 'y':
 		if (scout_ctrl)
-			scout.y += EYE_MOVE_UNIT;
+			scout.y += move_speed;
 		else
-			mother.y += EYE_MOVE_UNIT;
+			mother.y += move_speed;
 		break;
 	case 'Y':
 		if (scout_ctrl)
-			scout.y -= EYE_MOVE_UNIT;
+			scout.y -= move_speed;
 		else
-			mother.y -= EYE_MOVE_UNIT;
+			mother.y -= move_speed;
 		break;
 	case 'z':
 		if (scout_ctrl)
-			scout.z += EYE_MOVE_UNIT;
+			scout.z += move_speed;
 		else
-			mother.z += EYE_MOVE_UNIT;
+			mother.z += move_speed;
 		break;
 	case 'Z':
 		if (scout_ctrl)
-			scout.z -= EYE_MOVE_UNIT;
+			scout.z -= move_speed;
 		else
-			mother.z -= EYE_MOVE_UNIT;
+			mother.z -= move_speed;
 		break;
 	case 62:
 		scout_ctrl = false;
@@ -376,7 +482,7 @@ void keyboard_callback( unsigned char key, int x, int y ){
 
 }
 
-void update_soloar_system() {
+void update_solar_system() {
 	for(int i=0;i<NUM_SPHERE;i++) {
 		// increment axle spin
 		obj_spin_rots[i]+=SPIN_UNITS[i];
@@ -391,6 +497,22 @@ void update_soloar_system() {
 		//printf("obj[%d]: spin_rot=%f orbit_rot=%f\n",i,obj_spin_rots[i],obj_orbit_rots[i]);
 	}
 
+}
+
+void update_ship(ship* ship) {
+	glPushMatrix();
+	glLoadIdentity();
+	glRotatef(ship->yaw,0,1,0);
+	glRotatef(ship->roll,0,0,1);
+	glRotatef(ship->pitch,1,0,0);
+	glTranslatef(0,0,ship->forward);
+	ship->yaw=0;
+	ship->roll=0;
+	ship->pitch=0;
+	ship->forward=0;
+	glMultMatrixf(ship->current_m);
+	glGetFloatv(GL_MODELVIEW_MATRIX, ship->current_m);
+	glPopMatrix();
 }
 
 void draw_box(float x, float y, float z) {	
@@ -514,6 +636,7 @@ void draw_solar_system() {
 // display callback
 void display_callback( void ){
 	int current_window;
+	GLfloat tmp_m[16];
 
 	// retrieve the currently active window
 	current_window = glutGetWindow();
@@ -531,19 +654,20 @@ void display_callback( void ){
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+
+	/*glLoadIdentity();
 	gluLookAt(mother.x, mother.y, mother.z, mother.lookat_x, mother.lookat_y, mother.lookat_z,
-		mother.up_x, mother.up_y, mother.up_z);
+	mother.up_x, mother.up_y, mother.up_z);
 	glGetFloatv(GL_MODELVIEW_MATRIX,mother.current_m);
 	debug_matrix(mother.current_m);
 
 	glLoadIdentity();
 	gluLookAt(scout.x, scout.y, scout.z, scout.lookat_x, scout.lookat_y, scout.lookat_z,
-		scout.up_x, scout.up_y, scout.up_z);	
+	scout.up_x, scout.up_y, scout.up_z);	
 	glGetFloatv(GL_MODELVIEW_MATRIX,scout.current_m);
 	debug_matrix(scout.current_m);
-	glLoadIdentity();
+	glLoadIdentity();*/
 
-	GLfloat tmp_m[16];
 
 	if (current_window == mother_window) {
 		glMultMatrixf(mother.current_m);
@@ -555,8 +679,7 @@ void display_callback( void ){
 		draw_scoutship();
 		glPopMatrix();
 	} else if (current_window == scout_window) {
-		gluLookAt(scout.x, scout.y, scout.z, scout.lookat_x, scout.lookat_y, scout.lookat_z,
-			scout.up_x, scout.up_y, scout.up_z);	
+		glMultMatrixf(scout.current_m);	
 
 		glPushMatrix();
 		memcpy(tmp_m,mother.current_m,sizeof(tmp_m));
@@ -567,13 +690,38 @@ void display_callback( void ){
 	}
 
 	if (!paused) {
-		update_soloar_system();
+		update_solar_system();
 	}
 	draw_solar_system();
 
 	// swap the front and back buffers to display the scene
 	glutSetWindow( current_window );
 	glutSwapBuffers();
+}
+
+void getCurrentMatrice() {
+	glPushMatrix();
+	if (mode & ABS_LOOK_AT) {
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		gluLookAt(mother.x, mother.y, mother.z, mother.lookat_x, mother.lookat_y, mother.lookat_z,
+			mother.up_x, mother.up_y, mother.up_z);
+		glGetFloatv(GL_MODELVIEW_MATRIX,mother.current_m);
+		//debug_matrix(mother.current_m);
+
+		glLoadIdentity();
+		gluLookAt(scout.x, scout.y, scout.z, scout.lookat_x, scout.lookat_y, scout.lookat_z,
+			scout.up_x, scout.up_y, scout.up_z);	
+		glGetFloatv(GL_MODELVIEW_MATRIX,scout.current_m);
+		//debug_matrix(scout.current_m);
+		glLoadIdentity();
+
+	} else if (mode & REL_FLYING) {
+		printf("rel flying\n");
+		update_ship(&mother);
+		update_ship(&scout);
+	}
+	glPopMatrix();
 }
 
 // not exactly a callback, but sets a timer to call itself
@@ -596,6 +744,8 @@ void idle( int value ){
 	/// TODO: Put your idle code here! //////////////////////////
 	/////////////////////////////////////////////////////////////
 
+
+	getCurrentMatrice();
 
 	// set the currently active window to the mothership and
 	// request a redisplay
