@@ -16,6 +16,13 @@
 #define BLUE GREEN+1
 #define COLOR_BASES BLUE+1
 
+// Ship variables
+typedef struct ship {
+	GLfloat x,y,z,lookat_x,lookat_y,lookat_z,up_x,up_y,up_z;
+	GLfloat current_m[16];
+	GLfloat yaw,roll,pitch;
+} ship;
+
 // Ships properties
 #define SCOUT_INIT_X 0
 #define SCOUT_INIT_Y 100
@@ -148,3 +155,7 @@ const float ORBIT_UNITS[NUM_SPHERE] = {SUN_ORBIT_UNIT,MERCURY_ORBIT_UNIT,VENUS_O
 
 const float OBJ_COLORS[NUM_SPHERE][COLOR_BASES] = {SUN_COLOR,MERCURY_COLOR,VENUS_COLOR,EARTH_COLOR,
 	MARS_COLOR,JUPITER_COLOR,SATURN_COLOR,URANUS_COLOR,NEPTUNE_COLOR,PLUTO_COLOR,MOON_COLOR};
+
+
+
+

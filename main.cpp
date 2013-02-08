@@ -18,10 +18,10 @@
 #include<stdlib.h>
 #include<time.h>
 
-
+//new headers and functions
 #include "p2.h"
-
 bool invert_pose( float *m );
+void reset();
 
 //////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
@@ -42,30 +42,15 @@ int mother_window, scout_window;
 // display width and height
 int disp_width=512, disp_height=512;
 
-// cameras
-GLdouble *mother_trackball;;
-float mother_x = MOTHER_INIT_X;
-float mother_y = MOTHER_INIT_Y;
-float mother_z = MOTHER_INIT_Z;
-float mother_lookat_x = 0;
-float mother_lookat_y = 0;
-float mother_lookat_z = 0;
-float mother_up_x = 0;
-float mother_up_y = 1;
-float mother_up_z = 0;
+// ships
+ship mother;
+ship scout;
 
-float scout_x = SCOUT_INIT_X;
-float scout_y = SCOUT_INIT_Y;
-float scout_z = SCOUT_INIT_Z;
-float scout_lookat_x = 0;
-float scout_lookat_y = 0;
-float scout_lookat_z = 0;
-float scout_up_x = 0;
-float scout_up_y = 1;
-float scout_up_z = 0;
+GLdouble *mother_trackball;
+
 
 bool paused = 0;
-bool scout = false;
+bool scout_ctrl = false;
 
 // mouse
 bool left_pressed = 0;
@@ -117,6 +102,7 @@ void init(){
 	glEnable( GL_COLOR_MATERIAL );
 
 	// create solar system geometric objects
+	reset();
 	for (int i = 0; i <NUM_SPHERE; i++) {
 		spheres[i] = gluNewQuadric();
 		if(spheres[i] == NULL) {
@@ -139,15 +125,17 @@ void init(){
 	// set trackball matrix to identity
 	glPushMatrix();
 	glLoadIdentity();
-	mother_trackball = new GLdouble[16]();
-	glGetDoublev(GL_MODELVIEW, mother_trackball);
-	for (int i =0;i<16;i++) {
-		if (i % 4 == 0)
-			printf("\n");
-		printf("%f ", mother_trackball[i]);
-	}
-	printf("\n");
+	/*mother_trackball = new GLdouble[16]();
+	glGetDoublev(GL_MODELVIEW, mother_trackball);*/
 	glPopMatrix();
+}
+
+void debug_matrix(GLfloat* m) {
+	for (int i =0;i<16;i++) {
+		printf("%f ", m[i]);
+		if (i % 4 == 1)
+			printf("\n");
+	}
 }
 
 // free any allocated objects and return
@@ -205,9 +193,9 @@ void motion_callback(int x, int y) {
 	glPushMatrix();
 
 	if (current_window == mother_window) {
-		gaze_x = mother_x - mother_lookat_x;
-		gaze_y = mother_y - mother_lookat_y;
-		gaze_z = mother_z - mother_lookat_z;
+		gaze_x = mother.x - mother.lookat_x;
+		gaze_y = mother.y - mother.lookat_y;
+		gaze_z = mother.z - mother.lookat_z;
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		glTranslatef(gaze_x,gaze_y,gaze_z);
@@ -230,6 +218,28 @@ void resize_callback( int width, int height ){
 	glViewport (0, 0, width, height);      /* define the viewport */
 }
 
+void reset() {
+	mother.x = MOTHER_INIT_X;
+	mother.y = MOTHER_INIT_Y;
+	mother.z = MOTHER_INIT_Z;
+	mother.lookat_x = 0;
+	mother.lookat_y = 0;
+	mother.lookat_z = 0;
+	mother.up_x = 0;
+	mother.up_y = 1;
+	mother.up_z = 0;
+
+	scout.x = SCOUT_INIT_X;
+	scout.y = SCOUT_INIT_Y;
+	scout.z = SCOUT_INIT_Z;
+	scout.lookat_x = 0;
+	scout.lookat_y = 0;
+	scout.lookat_z = 0;
+	scout.up_x = 0;
+	scout.up_y = 1;
+	scout.up_z = 0;
+}
+
 // keyboard callback
 void keyboard_callback( unsigned char key, int x, int y ){
 	switch( key ){
@@ -239,122 +249,122 @@ void keyboard_callback( unsigned char key, int x, int y ){
 	case 'p':
 		paused = !paused;
 		break;
+	case 'm':
+		reset();
+		break;
 	case 'a':
-		if (scout)
-			scout_lookat_x += LOOKAT_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.lookat_x += LOOKAT_MOVE_UNIT;
 		else
-			mother_lookat_x += LOOKAT_MOVE_UNIT;
+			mother.lookat_x += LOOKAT_MOVE_UNIT;
 		break;
 	case 'A':
-		if (scout)
-			scout_lookat_x -= LOOKAT_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.lookat_x -= LOOKAT_MOVE_UNIT;
 		else
-			mother_lookat_x -= LOOKAT_MOVE_UNIT;
+			mother.lookat_x -= LOOKAT_MOVE_UNIT;
 		break;
 	case 'b':
-		if (scout)
-			scout_lookat_y += LOOKAT_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.lookat_y += LOOKAT_MOVE_UNIT;
 		else
-			mother_lookat_y += LOOKAT_MOVE_UNIT;
+			mother.lookat_y += LOOKAT_MOVE_UNIT;
 		break;
 	case 'B':
-		if (scout)
-			scout_lookat_y -= LOOKAT_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.lookat_y -= LOOKAT_MOVE_UNIT;
 		else
-			mother_lookat_y -= LOOKAT_MOVE_UNIT;
+			mother.lookat_y -= LOOKAT_MOVE_UNIT;
 		break;
 	case 'c':
-		if (scout)
-			scout_lookat_z += LOOKAT_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.lookat_z += LOOKAT_MOVE_UNIT;
 		else
-			mother_lookat_z += LOOKAT_MOVE_UNIT;
+			mother.lookat_z += LOOKAT_MOVE_UNIT;
 		break;
 	case 'C':
-		if (scout)
-			scout_lookat_z -= LOOKAT_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.lookat_z -= LOOKAT_MOVE_UNIT;
 		else
-			mother_lookat_z -= LOOKAT_MOVE_UNIT;
+			mother.lookat_z -= LOOKAT_MOVE_UNIT;
 		break;
 	case 'd':
-		if (scout)
-			scout_up_x += UP_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.up_x += UP_MOVE_UNIT;
 		else
-			mother_up_x += UP_MOVE_UNIT;
+			mother.up_x += UP_MOVE_UNIT;
 		break;
 	case 'D':
-		if (scout)
-			scout_up_x -= UP_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.up_x -= UP_MOVE_UNIT;
 		else
-			mother_up_x -= UP_MOVE_UNIT;
+			mother.up_x -= UP_MOVE_UNIT;
 		break;
 	case 'e':
-		if (scout)
-			scout_up_y += UP_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.up_y += UP_MOVE_UNIT;
 		else
-			mother_up_y += UP_MOVE_UNIT;
+			mother.up_y += UP_MOVE_UNIT;
 		break;
 	case 'E':
-		if (scout)
-			scout_up_y -= UP_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.up_y -= UP_MOVE_UNIT;
 		else
-			mother_up_y -= UP_MOVE_UNIT;
+			mother.up_y -= UP_MOVE_UNIT;
 		break;
 	case 'f':
-		if (scout)
-			scout_up_z += UP_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.up_z += UP_MOVE_UNIT;
 		else
-			mother_up_z += UP_MOVE_UNIT;
+			mother.up_z += UP_MOVE_UNIT;
 		break;
 	case 'F':
-		if (scout)
-			scout_up_z -= UP_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.up_z -= UP_MOVE_UNIT;
 		else
-			mother_up_z -= UP_MOVE_UNIT;
+			mother.up_z -= UP_MOVE_UNIT;
 		break;
 	case 'x':
-		if (scout)
-			scout_x += EYE_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.x += EYE_MOVE_UNIT;
 		else
-			mother_x += EYE_MOVE_UNIT;
+			mother.x += EYE_MOVE_UNIT;
 		break;
 	case 'X':
-		if (scout)
-			scout_x -= EYE_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.x -= EYE_MOVE_UNIT;
 		else
-			mother_x -= EYE_MOVE_UNIT;
+			mother.x -= EYE_MOVE_UNIT;
 		break;
 	case 'y':
-		if (scout)
-			scout_y += EYE_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.y += EYE_MOVE_UNIT;
 		else
-			mother_y += EYE_MOVE_UNIT;
+			mother.y += EYE_MOVE_UNIT;
 		break;
 	case 'Y':
-		if (scout)
-			scout_y -= EYE_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.y -= EYE_MOVE_UNIT;
 		else
-			mother_y -= EYE_MOVE_UNIT;
+			mother.y -= EYE_MOVE_UNIT;
 		break;
 	case 'z':
-		printf("%d\n",scout);
-		if (scout)
-			scout_z += EYE_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.z += EYE_MOVE_UNIT;
 		else
-			mother_z += EYE_MOVE_UNIT;
+			mother.z += EYE_MOVE_UNIT;
 		break;
 	case 'Z':
-		if (scout)
-			scout_z -= EYE_MOVE_UNIT;
+		if (scout_ctrl)
+			scout.z -= EYE_MOVE_UNIT;
 		else
-			mother_z -= EYE_MOVE_UNIT;
+			mother.z -= EYE_MOVE_UNIT;
 		break;
 	case 62:
-		scout = false;
-		printf("%d\n",scout);
+		scout_ctrl = false;
 		break;
 	case 60:
-		scout = true;
-		printf("%d\n",scout);
+		scout_ctrl = true;
 		break;
 	default:
 		break;
@@ -446,6 +456,7 @@ void draw_scoutship() {
 void draw_mothership() {
 	// main body
 	glPushMatrix();
+	glScalef(1.0,1.0,-1.0);
 	glColor3f(WHITE);
 	draw_cone(MOTHER_BODY_WIDTH,MOTHER_BODY_HEIGHT,MOTHER_BODY_LENGTH);
 	glTranslatef(0,MOTHER_BODY_HEIGHT,MOTHER_PLATFORM_LENGTH/2);
@@ -520,25 +531,37 @@ void display_callback( void ){
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+	gluLookAt(mother.x, mother.y, mother.z, mother.lookat_x, mother.lookat_y, mother.lookat_z,
+		mother.up_x, mother.up_y, mother.up_z);
+	glGetFloatv(GL_MODELVIEW_MATRIX,mother.current_m);
+	debug_matrix(mother.current_m);
+
+	glLoadIdentity();
+	gluLookAt(scout.x, scout.y, scout.z, scout.lookat_x, scout.lookat_y, scout.lookat_z,
+		scout.up_x, scout.up_y, scout.up_z);	
+	glGetFloatv(GL_MODELVIEW_MATRIX,scout.current_m);
+	debug_matrix(scout.current_m);
+	glLoadIdentity();
+
+	GLfloat tmp_m[16];
 
 	if (current_window == mother_window) {
-		gluLookAt(mother_x, mother_y, mother_z, mother_lookat_x, mother_lookat_y, mother_lookat_z,
-			mother_up_x, mother_up_y, mother_up_z);
+		glMultMatrixf(mother.current_m);
 
 		glPushMatrix();
-		glTranslatef(scout_x,scout_y,scout_z);
+		memcpy(tmp_m,scout.current_m,sizeof(tmp_m));
+		invert_pose(tmp_m);
+		glMultMatrixf(tmp_m);
 		draw_scoutship();
 		glPopMatrix();
 	} else if (current_window == scout_window) {
-		gluLookAt(scout_x, scout_y, scout_z, scout_lookat_x, scout_lookat_y, scout_lookat_z,
-			scout_up_x, scout_up_y, scout_up_z);	
+		gluLookAt(scout.x, scout.y, scout.z, scout.lookat_x, scout.lookat_y, scout.lookat_z,
+			scout.up_x, scout.up_y, scout.up_z);	
 
 		glPushMatrix();
-
-		float del_x = mother_x-mother_lookat_x;
-		float del_y = mother_y-mother_lookat_y;
-		float del_z = mother_z-mother_lookat_z;	
-		glTranslatef(mother_x,mother_y,mother_z);
+		memcpy(tmp_m,mother.current_m,sizeof(tmp_m));
+		invert_pose(tmp_m);
+		glMultMatrixf(tmp_m);
 		draw_mothership();
 		glPopMatrix();
 	}
