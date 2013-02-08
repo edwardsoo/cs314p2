@@ -474,22 +474,6 @@ void update_solar_system() {
 
 }
 
-void update_ship(ship* ship) {
-	glPushMatrix();
-	glLoadIdentity();
-	glRotatef(ship->yaw,0,1,0);
-	glRotatef(ship->roll,0,0,1);
-	glRotatef(ship->pitch,1,0,0);
-	glTranslatef(0,0,ship->forward);
-	ship->yaw=0;
-	ship->roll=0;
-	ship->pitch=0;
-	ship->forward=0;
-	glMultMatrixf(ship->current_m);
-	glGetFloatv(GL_MODELVIEW_MATRIX, ship->current_m);
-	glPopMatrix();
-}
-
 void draw_box(float x, float y, float z) {	
 	glPushMatrix();
 	glScalef(x,y,z);
@@ -674,28 +658,47 @@ void display_callback( void ){
 	glutSwapBuffers();
 }
 
+void abs_lookat_matrix(ship* ship) {
+	glPushMatrix();
+	glLoadIdentity();
+	gluLookAt(ship->x, ship->y, ship->z, ship->lookat_x, ship->lookat_y, ship->lookat_z,
+		ship->up_x, ship->up_y, ship->up_z);
+	glGetFloatv(GL_MODELVIEW_MATRIX,ship->current_m);
+	glPopMatrix();
+}
+
+void rel_flying_matrix(ship* ship) {
+	glPushMatrix();
+	glLoadIdentity();
+	glRotatef(ship->yaw,0,1,0);
+	glRotatef(ship->roll,0,0,1);
+	glRotatef(ship->pitch,1,0,0);
+	glTranslatef(0,0,ship->forward);
+	ship->yaw=0;
+	ship->roll=0;
+	ship->pitch=0;
+	ship->forward=0;
+	glMultMatrixf(ship->current_m);
+	glGetFloatv(GL_MODELVIEW_MATRIX, ship->current_m);
+	glPopMatrix();
+}
+
 void getCurrentMatrice() {
 	glPushMatrix();
+	glMatrixMode(GL_MODELVIEW);
 	if (mode & ABS_LOOK_AT) {
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		gluLookAt(mother.x, mother.y, mother.z, mother.lookat_x, mother.lookat_y, mother.lookat_z,
-			mother.up_x, mother.up_y, mother.up_z);
-		glGetFloatv(GL_MODELVIEW_MATRIX,mother.current_m);
-		//debug_matrix(mother.current_m);
-
-		glLoadIdentity();
-		gluLookAt(scout.x, scout.y, scout.z, scout.lookat_x, scout.lookat_y, scout.lookat_z,
-			scout.up_x, scout.up_y, scout.up_z);	
-		glGetFloatv(GL_MODELVIEW_MATRIX,scout.current_m);
-		//debug_matrix(scout.current_m);
-		glLoadIdentity();
+		abs_lookat_matrix(&mother);
+		abs_lookat_matrix(&scout);
 
 	} else if (mode & REL_FLYING) {
-		printf("rel flying\n");
-		update_ship(&mother);
-		update_ship(&scout);
+		rel_flying_matrix(&mother);
+		rel_flying_matrix(&scout);
+	} else if (mode & GEO_SYNC) {
+
 	}
+
+	//debug_matrix(scout.current_m);
+	//debug_matrix(mother.current_m);
 	glPopMatrix();
 }
 
@@ -718,7 +721,6 @@ void idle( int value ){
 	/////////////////////////////////////////////////////////////
 	/// TODO: Put your idle code here! //////////////////////////
 	/////////////////////////////////////////////////////////////
-
 
 	getCurrentMatrice();
 
