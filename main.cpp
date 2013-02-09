@@ -61,7 +61,6 @@ float obj_spin_rots[NUM_SPHERE] = {0};
 float obj_orbit_rots[NUM_SPHERE] = {0};
 GLUquadricObj* spheres[NUM_SPHERE] = {0};
 GLUquadricObj* disks[NUM_DISKS] = {0};
-GLfloat planet_m[NUM_SPHERE][MATRIX_SIZE] = {0};
 
 
 //////////////////////////////////////////////////////////////////
@@ -128,44 +127,6 @@ void cleanup(){
 /// Callback Stubs ///////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
-
-// mouse callback
-void mouse_callback(int button, int state, int x, int y) {
-
-	//printf("button:%d, state:%d\n", button, state);
-	switch (button)
-	{
-	case GLUT_LEFT_BUTTON:
-		if (state == GLUT_DOWN ) { 
-			left_pressed = true;
-			prev_x = x;
-			prev_y = y;
-		}
-		else 
-			left_pressed = false;
-		break;
-	default:
-		break;
-	}
-}
-
-// motion callback
-void motion_callback(int x, int y) {
-	int current_window;
-	int x_move, y_move;
-
-	// retrieve the currently active window
-	current_window = glutGetWindow();
-
-	if (left_pressed) {
-		x_move = x - prev_x;
-		y_move = y -prev_y;
-		prev_x = x;
-		prev_y = y;
-	}
-	glPushMatrix();
-
-}
 
 // window resize callback
 void resize_callback( int width, int height ){    
@@ -375,10 +336,6 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		break;
 	}
 
-	/////////////////////////////////////////////////////////////
-	/// TODO: Put your keyboard code here! //////////////////////
-	/////////////////////////////////////////////////////////////
-
 }
 
 void update_solar_system() {
@@ -463,6 +420,7 @@ void draw_mothership() {
 	glPushMatrix();
 	glScalef(1.0,1.0,-1.0);
 	glColor3f(WHITE);
+	// deck
 	draw_cone(MOTHER_BODY_WIDTH,MOTHER_BODY_HEIGHT,MOTHER_BODY_LENGTH);
 	glTranslatef(0,MOTHER_BODY_HEIGHT,MOTHER_PLATFORM_LENGTH/2);
 	draw_box(MOTHER_PLATFORM_WIDTH,MOTHER_PLATFORM_HEIGHT,MOTHER_PLATFORM_LENGTH);
@@ -472,10 +430,6 @@ void draw_mothership() {
 }
 
 void draw_orbit_and_planet(int i) {
-	// Get inversed view matrix for later use
-	GLfloat inv_view_m[MATRIX_SIZE];
-	glGetFloatv(GL_MODELVIEW_MATRIX, inv_view_m);
-	invert_pose(inv_view_m);
 
 	glPushMatrix();
 	glRotatef(90,1.0,0,0);
@@ -483,31 +437,21 @@ void draw_orbit_and_planet(int i) {
 	gluDisk(disks[i],OBJ_ORBIT_RADIUS[i]-ORBIT_WEIGHT/2,
 		OBJ_ORBIT_RADIUS[i]+ORBIT_WEIGHT/2,DISK_SLICES,DISK_LOOPS);
 	glPopMatrix();
-	/*glRotatef(obj_orbit_rots[i], 0, 1, 0);
-	glTranslatef(0, 0, OBJ_ORBIT_RADIUS[i]);*/
 
 	GLfloat planet_z = sinf(obj_orbit_rots[i])*OBJ_ORBIT_RADIUS[i];
 	GLfloat planet_x = cosf(obj_orbit_rots[i])*OBJ_ORBIT_RADIUS[i];
 	glTranslatef(planet_x, 0, planet_z);
 
-	glRotatef(OBJ_AXLE_ANGLES[i],1,0,0);
+	glRotatef(OBJ_AXLE_ANGLES[i],0,0,1);
 	glRotatef(obj_spin_rots[i],0,1,0);
 	glColor3f(OBJ_COLORS[i][RED],OBJ_COLORS[i][GREEN],OBJ_COLORS[i][BLUE]);
 	gluSphere(spheres[i], OBJ_RADIUS[i], SPHERE_SLICES, SPHERE_STACKS); 
 
-	// Get planet model transformation matrix
-	glPushMatrix();
-	glGetFloatv(GL_MODELVIEW_MATRIX, planet_m[i]);
-	glLoadIdentity();
-	glMultMatrixf(inv_view_m);
-	glMultMatrixf(planet_m[i]);
-	glGetFloatv(GL_MODELVIEW_MATRIX, planet_m[i]);
-	glPopMatrix();
 
 }
 
 void draw_solar_system() {
-
+	GLfloat moon_z,moon_x;
 	for (int i=0;i<NUM_SPHERE;i++) {
 
 		glPushMatrix();
@@ -521,14 +465,14 @@ void draw_solar_system() {
 			gluSphere(spheres[i], OBJ_RADIUS[i], SPHERE_SLICES, SPHERE_STACKS);
 			break;
 		case MOON:
-			glRotatef(obj_orbit_rots[EARTH], 0, 1, 0);
-			glTranslatef(0, 0, OBJ_ORBIT_RADIUS[EARTH]);
+			moon_z = sinf(obj_orbit_rots[EARTH])*OBJ_ORBIT_RADIUS[EARTH];
+			moon_x = cosf(obj_orbit_rots[EARTH])*OBJ_ORBIT_RADIUS[EARTH];
+			glTranslatef(moon_x, 0, moon_z);
 			draw_orbit_and_planet(i);
 			break;
 		case SATURN:
 			draw_orbit_and_planet(i);
 			glRotatef(90,1.0,0,0);
-			glRotatef(SATURN_RING_ANGLE, 1,0,0);
 			glColor4f(BROWN,ORBIT_ALPHA);
 			gluDisk(disks[SATURN_RING],SATURN_RING_INNER_RAD,
 				SATURN_RING_OUTER_RAD,DISK_SLICES,DISK_LOOPS);
@@ -568,6 +512,7 @@ void display_callback( void ){
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	// use current matrix as view, draw other ship with inversed current matrix
 	if (current_window == mother_window) {
 		glMultMatrixf(mother.current_m);
 
@@ -606,11 +551,13 @@ void abs_lookat_matrix(ship* ship) {
 
 void rel_flying_matrix(ship* ship) {
 	glPushMatrix();
+	// get incremental matrix
 	glLoadIdentity();
 	glRotatef(ship->yaw,0,1,0);
 	glRotatef(ship->roll,0,0,1);
 	glRotatef(ship->pitch,1,0,0);
 	glTranslatef(0,0,ship->forward);
+	// consume values
 	ship->yaw=0;
 	ship->roll=0;
 	ship->pitch=0;
@@ -631,17 +578,10 @@ void geo_sync_matrix(ship* ship) {
 	GLfloat planet_z = sinf(obj_orbit_rots[i])*OBJ_ORBIT_RADIUS[i];
 	GLfloat planet_x = cosf(obj_orbit_rots[i])*OBJ_ORBIT_RADIUS[i];
 	glTranslatef(planet_x, 0, planet_z);
-	glRotatef(OBJ_AXLE_ANGLES[i],1,0,0);
+	glRotatef(OBJ_AXLE_ANGLES[i],0,0,1);
 	glRotatef(obj_spin_rots[i],0,1,0);
 	glTranslatef(0,0,OBJ_RADIUS[i]+ship->geo_dist);
-
-
-
-	/*glPushMatrix();
-	glLoadIdentity();
-	glMultMatrixf(planet_m[current_planet]);
-	glTranslatef(0,0,OBJ_RADIUS[current_planet]+ship->geo_dist);*/
-
+	// get view matrix by inverting
 	glGetFloatv(GL_MODELVIEW_MATRIX,tmp_m);
 	glLoadIdentity();
 	invert_pose(tmp_m);
@@ -653,6 +593,7 @@ void geo_sync_matrix(ship* ship) {
 
 void getCurrentMatrice() {
 	glPushMatrix();
+
 	glMatrixMode(GL_MODELVIEW);
 	if (scout.mode & ABS_LOOK_AT) {
 		abs_lookat_matrix(&scout);
@@ -737,8 +678,6 @@ int main( int argc, char **argv ){
 	glutKeyboardFunc( keyboard_callback );
 	glutDisplayFunc( display_callback );
 	glutReshapeFunc( resize_callback );
-	glutMouseFunc( mouse_callback );
-	glutMotionFunc ( motion_callback );
 
 	// initialize the scout ship window
 	glutInitWindowSize( disp_width, disp_height );
@@ -753,7 +692,7 @@ int main( int argc, char **argv ){
 	glutSetWindow( scout_window );
 	init();
 
-	
+
 	// create solar system geometric objects
 	reset();
 	for (int i = 0; i <NUM_SPHERE; i++) {
