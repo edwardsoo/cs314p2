@@ -18,6 +18,8 @@
 #include<stdlib.h>
 #include<time.h>
 #include<math.h>
+#include<string.h>
+#include<stdio.h>
 
 //new headers and functions
 #include "p2.h"

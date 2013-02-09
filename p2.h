@@ -25,7 +25,7 @@ typedef struct ship {
 
 // Ships properties
 #define DEFAULT_SPEED 10.0f
-#define SPEED_UNIT 1.0f
+#define SPEED_UNIT 10.0f
 #define SPEED_LIMIT DEFAULT_SPEED*10
 #define LOOKAT_MOVE_UNIT 5.0f
 #define UP_MOVE_UNIT 0.1f
