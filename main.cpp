@@ -17,6 +17,7 @@
 #include<iostream>
 #include<stdlib.h>
 #include<time.h>
+#include<math.h>
 
 //new headers and functions
 #include "p2.h"
@@ -46,9 +47,6 @@ int disp_width=512, disp_height=512;
 ship mother;
 ship scout;
 
-float move_speed = DEFAULT_SPEED;
-unsigned int current_planet = SATURN;
-
 bool paused = 0;
 bool scout_ctrl = false;
 
@@ -61,7 +59,7 @@ float obj_spin_rots[NUM_SPHERE] = {0};
 float obj_orbit_rots[NUM_SPHERE] = {0};
 GLUquadricObj* spheres[NUM_SPHERE] = {0};
 GLUquadricObj* disks[NUM_DISKS] = {0};
-GLfloat planet_m[NUM_SPHERE][16] = {0};
+GLfloat planet_m[NUM_SPHERE][MATRIX_SIZE] = {0};
 
 
 //////////////////////////////////////////////////////////////////
@@ -102,30 +100,11 @@ void init(){
 	glEnable( GL_LIGHT1 );
 	glEnable( GL_COLOR_MATERIAL );
 
-	// create solar system geometric objects
-	reset();
-	for (int i = 0; i <NUM_SPHERE; i++) {
-		spheres[i] = gluNewQuadric();
-		if(spheres[i] == NULL) {
-			exit(1);
-		}
-	}
-	for (int i = 0; i <NUM_DISKS; i++) {
-		disks[i] = gluNewQuadric();
-		if(disks[i] == NULL) {
-			exit(1);
-		}
-	}
-	// randomize planet locations
-	srand(time(NULL));
-	for (int i = 0; i <NUM_SPHERE; i++) {
-		obj_orbit_rots[i] = rand() % 360;
-	}
 
 }
 
 void debug_matrix(GLfloat* m) {
-	for (int i =0;i<16;i++) {
+	for (int i =0;i<MATRIX_SIZE;i++) {
 		printf("%f ", m[i]);
 		if (i % 4 == 1)
 			printf("\n");
@@ -137,12 +116,6 @@ void cleanup(){
 	/////////////////////////////////////////////////////////////
 	/// TODO: Put your teardown code here! //////////////////////
 	/////////////////////////////////////////////////////////////
-	for (int i = 0; i <NUM_SPHERE; i++) {
-		delete spheres[i];
-	}
-	for (int i = 0; i <NUM_DISKS; i++) {
-		delete disks[i];
-	}
 
 }
 
@@ -215,6 +188,9 @@ void reset() {
 	mother.roll = 0;
 	mother.pitch = 0;
 	mother.mode = ABS_LOOK_AT;
+	mother.geo_dist = DEFAULT_GEO_DIST;
+	mother.move_speed = DEFAULT_SPEED;
+	mother.current_planet = EARTH;
 
 	scout.x = SCOUT_INIT_X;
 	scout.y = SCOUT_INIT_Y;
@@ -229,44 +205,49 @@ void reset() {
 	scout.roll = 0;
 	scout.pitch = 0;
 	scout.mode = ABS_LOOK_AT;
-
-	move_speed = DEFAULT_SPEED;
+	scout.geo_dist = DEFAULT_GEO_DIST;
+	scout.move_speed = DEFAULT_SPEED;
+	scout.current_planet = PLUTO;
 }
 
 // keyboard callback
 void keyboard_callback( unsigned char key, int x, int y ){
+	ship *ship;
+	if (scout_ctrl)
+		ship = &scout;
+	else
+		ship = &mother;
+
 	switch( key ){
 	case 27:
 		quit = true;
 		break;
 	case '-':
-		move_speed -= SPEED_UNIT;
-		if (move_speed < 0)
-			move_speed = 0;
+		ship->move_speed -= SPEED_UNIT;
+		if (ship->move_speed < 0)
+			ship->move_speed = 0;
 		break;
 	case '=':
-		move_speed += SPEED_UNIT;
-		if (move_speed > SPEED_LIMIT)
-			move_speed = SPEED_LIMIT;
+		ship->move_speed += SPEED_UNIT;
+		if (ship->move_speed > SPEED_LIMIT)
+			ship->move_speed = SPEED_LIMIT;
 		break;
 	case 'w':
-		if (scout_ctrl) { 
-			if (scout.mode&REL_FLYING) 
-				scout.forward += move_speed;
-		}
-		else {
-			if (mother.mode&REL_FLYING)
-				mother.forward += move_speed;
+		if (ship->mode&REL_FLYING) 
+			ship->forward += ship->move_speed;
+		else if (ship->mode&GEO_SYNC) {
+			ship->geo_dist -= ship->move_speed;
+			if (ship->geo_dist < 0)
+				ship->geo_dist = 0;
 		}
 		break;
 	case 's':
-		if (scout_ctrl) { 
-			if (scout.mode&REL_FLYING) 
-				scout.forward -= move_speed;
-		}
-		else {
-			if (mother.mode&REL_FLYING)
-				mother.forward -= move_speed;
+		if (ship->mode&REL_FLYING) 
+			ship->forward -= ship->move_speed;
+		else if (ship->mode&GEO_SYNC) {
+			ship->geo_dist += ship->move_speed;
+			if (ship->geo_dist > MAX_GEO_DIST)
+				ship->geo_dist = MAX_GEO_DIST;
 		}
 		break;
 	case 'p':
@@ -276,191 +257,117 @@ void keyboard_callback( unsigned char key, int x, int y ){
 		reset();
 		break;
 	case 'l':
-		if (scout_ctrl) { 
-			scout.mode = ABS_LOOK_AT;
-		}
-		else {
-			mother.mode = ABS_LOOK_AT;
-		}
+		ship->mode = ABS_LOOK_AT;
+		break;
 	case 'r':
-		if (scout_ctrl) { 
-			scout.mode = REL_FLYING;
-		}
-		else {
-			mother.mode = REL_FLYING;
-		}
+		ship->mode = REL_FLYING;
 		break;
 	case 'g':
-		if (scout_ctrl) { 
-			scout.mode = GEO_SYNC;
-		}
-		else {
-			mother.mode = GEO_SYNC;
-		}
+		ship->mode = GEO_SYNC;
 		break;
 	case 'q':
-		if (scout_ctrl) { 
-			if (scout.mode&REL_FLYING) 
-				scout.yaw -= ROTATE_UNIT;
-		}
-		else {
-			if (mother.mode&REL_FLYING)
-				mother.yaw -= ROTATE_UNIT;
-		}
+		if (ship->mode&REL_FLYING) 
+			ship->yaw -= ROTATE_UNIT;
 		break;
 	case 'a':
-		if (scout_ctrl) {
-			if (scout.mode&ABS_LOOK_AT)
-				scout.lookat_x += LOOKAT_MOVE_UNIT;
-			if (scout.mode&REL_FLYING)
-				scout.roll -= ROTATE_UNIT;
-		}
-		else {
-			if (mother.mode&ABS_LOOK_AT)
-				mother.lookat_x += LOOKAT_MOVE_UNIT;
-			if (mother.mode&REL_FLYING)
-				mother.roll -= ROTATE_UNIT;
-		}
+		if (ship->mode&ABS_LOOK_AT)
+			ship->lookat_x += LOOKAT_MOVE_UNIT;
+		if (ship->mode&REL_FLYING)
+			ship->roll -= ROTATE_UNIT;
 		break;
 	case 'A':
-		if (scout_ctrl)
-			scout.lookat_x -= LOOKAT_MOVE_UNIT;
-		else
-			mother.lookat_x -= LOOKAT_MOVE_UNIT;
+		ship->lookat_x -= LOOKAT_MOVE_UNIT;
 		break;
 	case 'b':
-		if (scout_ctrl)
-			scout.lookat_y += LOOKAT_MOVE_UNIT;
-		else
-			mother.lookat_y += LOOKAT_MOVE_UNIT;
+		ship->lookat_y += LOOKAT_MOVE_UNIT;
 		break;
 	case 'B':
-		if (scout_ctrl)
-			scout.lookat_y -= LOOKAT_MOVE_UNIT;
-		else
-			mother.lookat_y -= LOOKAT_MOVE_UNIT;
+		ship->lookat_y -= LOOKAT_MOVE_UNIT;
 		break;
 	case 'c':
-		if (scout_ctrl) {
-			if (scout.mode&ABS_LOOK_AT)
-				scout.lookat_z += LOOKAT_MOVE_UNIT;
-			if (scout.mode&REL_FLYING)
-				scout.pitch += ROTATE_UNIT;
-		}
-		else {
-			if (mother.mode&ABS_LOOK_AT)
-				mother.lookat_z += LOOKAT_MOVE_UNIT;
-			if (mother.mode&REL_FLYING)
-				mother.pitch += ROTATE_UNIT;
-		}
+		if (ship->mode&ABS_LOOK_AT)
+			ship->lookat_z += LOOKAT_MOVE_UNIT;
+		if (ship->mode&REL_FLYING)
+			ship->pitch += ROTATE_UNIT;
 		break;
 	case 'C':
-		if (scout_ctrl)
-			scout.lookat_z -= LOOKAT_MOVE_UNIT;
-		else
-			mother.lookat_z -= LOOKAT_MOVE_UNIT;
-		break;
+		ship->lookat_z -= LOOKAT_MOVE_UNIT;
 	case 'd':
-		if (scout_ctrl) {
-			if (scout.mode&ABS_LOOK_AT)
-				scout.up_x += UP_MOVE_UNIT;
-			if (scout.mode&REL_FLYING)
-				scout.roll += ROTATE_UNIT;
-		}
-		else {
-			if (mother.mode&ABS_LOOK_AT)
-				mother.up_x += UP_MOVE_UNIT;
-			if (mother.mode&REL_FLYING)
-				mother.roll += ROTATE_UNIT;
-		}
-		break;
+		if (ship->mode&ABS_LOOK_AT)
+			ship->up_x += UP_MOVE_UNIT;
+		if (ship->mode&REL_FLYING)
+			ship->roll += ROTATE_UNIT;
 	case 'D':
-		if (scout_ctrl)
-			scout.up_x -= UP_MOVE_UNIT;
-		else
-			mother.up_x -= UP_MOVE_UNIT;
+		ship->up_x -= UP_MOVE_UNIT;
 		break;
 	case 'e':
-		if (scout_ctrl){
-			if (scout.mode&ABS_LOOK_AT) 
-				scout.up_y += UP_MOVE_UNIT;
-			else if (scout.mode&REL_FLYING)
-				scout.yaw += ROTATE_UNIT;
-		}
-		else {
-			if (mother.mode&ABS_LOOK_AT)
-				mother.up_y += UP_MOVE_UNIT;
-			else if (mother.mode&REL_FLYING)
-				mother.yaw += ROTATE_UNIT;
-		}
+		if (ship->mode&ABS_LOOK_AT) 
+			ship->up_y += UP_MOVE_UNIT;
+		else if (ship->mode&REL_FLYING)
+			ship->yaw += ROTATE_UNIT;
 		break;
 	case 'E':
-		if (scout_ctrl)
-			scout.up_y -= UP_MOVE_UNIT;
-		else
-			mother.up_y -= UP_MOVE_UNIT;
+		ship->up_y -= UP_MOVE_UNIT;
 		break;
 	case 'f':
-		if (scout_ctrl)
-			scout.up_z += UP_MOVE_UNIT;
-		else
-			mother.up_z += UP_MOVE_UNIT;
+		ship->up_z += UP_MOVE_UNIT;
 		break;
 	case 'F':
-		if (scout_ctrl)
-			scout.up_z -= UP_MOVE_UNIT;
-		else
-			mother.up_z -= UP_MOVE_UNIT;
+		ship->up_z -= UP_MOVE_UNIT;
 		break;
 	case 'x':
-		if (scout_ctrl){
-			if (scout.mode&ABS_LOOK_AT)
-				scout.x += move_speed;
-			if (scout.mode&REL_FLYING)
-				scout.pitch -= ROTATE_UNIT;
-		}
-		else {
-			if (mother.mode&ABS_LOOK_AT)
-				mother.x += move_speed;
-			if (mother.mode&REL_FLYING)
-				mother.pitch -= ROTATE_UNIT;
-		}
+		if (ship->mode&ABS_LOOK_AT)
+			ship->x += ship->move_speed;
+		if (ship->mode&REL_FLYING)
+			ship->pitch -= ROTATE_UNIT;
 		break;
 	case 'X':
-		if (scout_ctrl)
-			scout.x -= move_speed;
-		else
-			mother.x -= move_speed;
+		ship->x -= ship->move_speed;
 		break;
 	case 'y':
-		if (scout_ctrl)
-			scout.y += move_speed;
-		else
-			mother.y += move_speed;
+		ship->y += ship->move_speed;
 		break;
 	case 'Y':
-		if (scout_ctrl)
-			scout.y -= move_speed;
-		else
-			mother.y -= move_speed;
+		ship->y -= ship->move_speed;
 		break;
 	case 'z':
-		if (scout_ctrl)
-			scout.z += move_speed;
-		else
-			mother.z += move_speed;
+		ship->z += ship->move_speed;
 		break;
 	case 'Z':
-		if (scout_ctrl)
-			scout.z -= move_speed;
-		else
-			mother.z -= move_speed;
+		ship->z -= ship->move_speed;
 		break;
-	case 62:
+	case '<':
+		scout_ctrl = true;
+		break;
+	case '>':
 		scout_ctrl = false;
 		break;
-	case 60:
-		scout_ctrl = true;
+	case '1':
+		ship->current_planet = MERCURY;
+		break;
+	case '2':
+		ship->current_planet = VENUS;
+		break;
+	case '3':
+		ship->current_planet = EARTH;
+		break;
+	case '4':
+		ship->current_planet = MARS;
+		break;
+	case '5':
+		ship->current_planet = JUPITER;
+		break;
+	case '6':
+		ship->current_planet = SATURN;
+		break;
+	case '7':
+		ship->current_planet = URANUS;
+		break;
+	case '8':
+		ship->current_planet = NEPTUNE;
+		break;
+	case '9':
+		ship->current_planet = PLUTO;
 		break;
 	default:
 		break;
@@ -477,12 +384,12 @@ void update_solar_system() {
 		// increment axle spin
 		obj_spin_rots[i]+=SPIN_UNITS[i];
 		if (obj_spin_rots[i] >= FULL_ROTATION) 
-			obj_spin_rots[i] = 0;
+			obj_spin_rots[i] = fmodf(obj_spin_rots[i],FULL_ROTATION);
 
 		// increment location on orbit
 		obj_orbit_rots[i]+=ORBIT_UNITS[i];
 		if (obj_orbit_rots[i] >= FULL_ROTATION) 
-			obj_orbit_rots[i] = 0;
+			obj_orbit_rots[i] = fmodf(obj_orbit_rots[i],FULL_ROTATION);
 
 		//printf("obj[%d]: spin_rot=%f orbit_rot=%f\n",i,obj_spin_rots[i],obj_orbit_rots[i]);
 	}
@@ -563,22 +470,33 @@ void draw_mothership() {
 }
 
 void draw_orbit_and_planet(int i) {
+	// Get inversed view matrix for later use
+	GLfloat inv_view_m[MATRIX_SIZE];
+	glGetFloatv(GL_MODELVIEW_MATRIX, inv_view_m);
+	invert_pose(inv_view_m);
+
 	glPushMatrix();
-	glRotatef(-90,1.0,0,0);
+	glRotatef(90,1.0,0,0);
+	glColor4f(WHITE,ORBIT_ALPHA);
 	gluDisk(disks[i],OBJ_ORBIT_RADIUS[i]-ORBIT_WEIGHT/2,
 		OBJ_ORBIT_RADIUS[i]+ORBIT_WEIGHT/2,DISK_SLICES,DISK_LOOPS);
-	glRotatef(obj_orbit_rots[i], 0, 0, 1.0);
-	glTranslatef(OBJ_ORBIT_RADIUS[i], 0, 0);
-	glGetFloatv(GL_MODELVIEW_MATRIX,planet_m[i]);
+	glPopMatrix();
+	glRotatef(obj_orbit_rots[i], 0, 1, 0);
+	glTranslatef(0, 0, OBJ_ORBIT_RADIUS[i]);
+	glRotatef(OBJ_AXLE_ANGLES[i],1,0,0);
+	glRotatef(obj_spin_rots[i],0,1,0);
 	glColor3f(OBJ_COLORS[i][RED],OBJ_COLORS[i][GREEN],OBJ_COLORS[i][BLUE]);
 	gluSphere(spheres[i], OBJ_RADIUS[i], SPHERE_SLICES, SPHERE_STACKS); 
-	if (i == SATURN) {
-		glRotatef(SATURN_RING_ANGLE, 0,1.0,0);
-		glColor4f(BROWN,ORBIT_ALPHA);
-		gluDisk(disks[SATURN_RING],SATURN_RING_INNER_RAD,
-			SATURN_RING_OUTER_RAD,DISK_SLICES,DISK_LOOPS);
-	}
+
+	// Get planet model transformation matrix
+	glPushMatrix();
+	glGetFloatv(GL_MODELVIEW_MATRIX, planet_m[i]);
+	glLoadIdentity();
+	glMultMatrixf(inv_view_m);
+	glMultMatrixf(planet_m[i]);
+	glGetFloatv(GL_MODELVIEW_MATRIX, planet_m[i]);
 	glPopMatrix();
+
 }
 
 void draw_solar_system() {
@@ -596,10 +514,23 @@ void draw_solar_system() {
 			gluSphere(spheres[i], OBJ_RADIUS[i], SPHERE_SLICES, SPHERE_STACKS);
 			break;
 		case MOON:
-			glRotatef(obj_orbit_rots[EARTH], 0, 1.0, 0);
-			glTranslatef(OBJ_ORBIT_RADIUS[EARTH], 0, 0);
+			glRotatef(obj_orbit_rots[EARTH], 0, 1, 0);
+			glTranslatef(0, 0, OBJ_ORBIT_RADIUS[EARTH]);
+			draw_orbit_and_planet(i);
+			break;
+		case SATURN:
+			draw_orbit_and_planet(i);
+			glRotatef(90,1.0,0,0);
+			glRotatef(SATURN_RING_ANGLE, 1,0,0);
+			glColor4f(BROWN,ORBIT_ALPHA);
+			gluDisk(disks[SATURN_RING],SATURN_RING_INNER_RAD,
+				SATURN_RING_OUTER_RAD,DISK_SLICES,DISK_LOOPS);
+			break;
+		case PLUTO:
+			glRotatef(PLUTO_ORBIT_ANGLE,0,0,1);
+			draw_orbit_and_planet(i);
+			break;
 		default:
-			glColor4f(WHITE,ORBIT_ALPHA);
 			draw_orbit_and_planet(i);
 			break;
 		}
@@ -611,7 +542,7 @@ void draw_solar_system() {
 // display callback
 void display_callback( void ){
 	int current_window;
-	GLfloat tmp_m[16];
+	GLfloat tmp_m[MATRIX_SIZE];
 
 	// retrieve the currently active window
 	current_window = glutGetWindow();
@@ -650,9 +581,6 @@ void display_callback( void ){
 		glPopMatrix();
 	}
 
-	if (!paused) {
-		update_solar_system();
-	}
 	draw_solar_system();
 
 	// swap the front and back buffers to display the scene
@@ -686,24 +614,31 @@ void rel_flying_matrix(ship* ship) {
 }
 
 void geo_sync_matrix(ship* ship) {
-	GLfloat tmp_m[16];
-
-	// get transformation from origin to planet
+	GLfloat tmp_m[MATRIX_SIZE];
+	unsigned int i = ship->current_planet;
+	// get transformation to planet
 	glPushMatrix();
 	glLoadIdentity();
-	glRotatef(obj_orbit_rots[current_planet], 0, 1, 0);
-	glTranslatef(OBJ_ORBIT_RADIUS[current_planet], 0, 0);
+	if (i == PLUTO)
+		glRotatef(PLUTO_ORBIT_ANGLE,0,0,1);
+	glRotatef(obj_orbit_rots[i], 0, 1, 0);
+	glTranslatef(0, 0, OBJ_ORBIT_RADIUS[i]);
+	glRotatef(OBJ_AXLE_ANGLES[i],1,0,0);
+	glRotatef(obj_spin_rots[i],0,1,0);
+	glTranslatef(0,0,OBJ_RADIUS[i]+ship->geo_dist);
+
+
+
+	/*glPushMatrix();
+	glLoadIdentity();
+	glMultMatrixf(planet_m[current_planet]);
+	glTranslatef(0,0,OBJ_RADIUS[current_planet]+ship->geo_dist);*/
+
 	glGetFloatv(GL_MODELVIEW_MATRIX,tmp_m);
-	glPopMatrix();
-
-	glPushMatrix();
 	glLoadIdentity();
-	//gluLookAt(ship->x, ship->y, ship->z, ship->lookat_x, ship->lookat_y, ship->lookat_z,
-		//ship->up_x, ship->up_y, ship->up_z);
-/*
 	invert_pose(tmp_m);
-	glMultMatrixf(tmp_m);*/
-	glTranslatef(0,0,OBJ_ORBIT_RADIUS[current_planet]);
+	glMultMatrixf(tmp_m);
+
 	glGetFloatv(GL_MODELVIEW_MATRIX,ship->current_m);
 	glPopMatrix();
 }
@@ -724,6 +659,7 @@ void getCurrentMatrice() {
 	} else if (mother.mode & REL_FLYING) {
 		rel_flying_matrix(&mother);
 	} else if (mother.mode & GEO_SYNC) {
+		geo_sync_matrix(&mother);
 	}
 
 	//debug_matrix(scout.current_m);
@@ -751,6 +687,9 @@ void idle( int value ){
 	/// TODO: Put your idle code here! //////////////////////////
 	/////////////////////////////////////////////////////////////
 
+	if (!paused) {
+		update_solar_system();
+	}
 	getCurrentMatrice();
 
 	// set the currently active window to the mothership and
@@ -806,6 +745,31 @@ int main( int argc, char **argv ){
 	glutSetWindow( scout_window );
 	init();
 
+	
+	// create solar system geometric objects
+	reset();
+	for (int i = 0; i <NUM_SPHERE; i++) {
+		spheres[i] = gluNewQuadric();
+		if(spheres[i] == NULL) {
+			exit(1);
+		}
+	}
+	for (int i = 0; i <NUM_DISKS; i++) {
+		disks[i] = gluNewQuadric();
+		if(disks[i] == NULL) {
+			exit(1);
+		}
+	}
+
+	// randomize planet locations
+	srand(time(NULL));
+	for (int i = 0; i <NUM_SPHERE; i++) {
+		obj_orbit_rots[i] = rand() % 360;
+	}
+	for (int i = 0; i <NUM_SPHERE; i++) {
+		obj_spin_rots[i] = rand() % 360;
+	}
+
 	// start the idle on a fixed timer callback
 	idle( 0 );
 
@@ -818,7 +782,7 @@ int main( int argc, char **argv ){
 
 // inversion routine originally from MESA
 bool invert_pose( float *m ){
-	float inv[16], det;
+	float inv[MATRIX_SIZE], det;
 	int i;
 
 	inv[0] = m[5] * m[10] * m[15] -
@@ -940,7 +904,7 @@ bool invert_pose( float *m ){
 
 	det = 1.0 / det;
 
-	for (i = 0; i < 16; i++)
+	for (i = 0; i < MATRIX_SIZE; i++)
 		m[i] = inv[i] * det;
 
 	return true;
