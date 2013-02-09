@@ -481,8 +481,13 @@ void draw_orbit_and_planet(int i) {
 	gluDisk(disks[i],OBJ_ORBIT_RADIUS[i]-ORBIT_WEIGHT/2,
 		OBJ_ORBIT_RADIUS[i]+ORBIT_WEIGHT/2,DISK_SLICES,DISK_LOOPS);
 	glPopMatrix();
-	glRotatef(obj_orbit_rots[i], 0, 1, 0);
-	glTranslatef(0, 0, OBJ_ORBIT_RADIUS[i]);
+	/*glRotatef(obj_orbit_rots[i], 0, 1, 0);
+	glTranslatef(0, 0, OBJ_ORBIT_RADIUS[i]);*/
+
+	GLfloat planet_z = sinf(obj_orbit_rots[i])*OBJ_ORBIT_RADIUS[i];
+	GLfloat planet_x = cosf(obj_orbit_rots[i])*OBJ_ORBIT_RADIUS[i];
+	glTranslatef(planet_x, 0, planet_z);
+
 	glRotatef(OBJ_AXLE_ANGLES[i],1,0,0);
 	glRotatef(obj_spin_rots[i],0,1,0);
 	glColor3f(OBJ_COLORS[i][RED],OBJ_COLORS[i][GREEN],OBJ_COLORS[i][BLUE]);
@@ -621,8 +626,9 @@ void geo_sync_matrix(ship* ship) {
 	glLoadIdentity();
 	if (i == PLUTO)
 		glRotatef(PLUTO_ORBIT_ANGLE,0,0,1);
-	glRotatef(obj_orbit_rots[i], 0, 1, 0);
-	glTranslatef(0, 0, OBJ_ORBIT_RADIUS[i]);
+	GLfloat planet_z = sinf(obj_orbit_rots[i])*OBJ_ORBIT_RADIUS[i];
+	GLfloat planet_x = cosf(obj_orbit_rots[i])*OBJ_ORBIT_RADIUS[i];
+	glTranslatef(planet_x, 0, planet_z);
 	glRotatef(OBJ_AXLE_ANGLES[i],1,0,0);
 	glRotatef(obj_spin_rots[i],0,1,0);
 	glTranslatef(0,0,OBJ_RADIUS[i]+ship->geo_dist);
